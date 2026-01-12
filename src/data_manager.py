@@ -81,19 +81,55 @@ class DataManager:
             }
             interval = tf_map.get(timeframe, "1h")
             
-            # Parâmetros
-            params = {"symbol": symbol.upper(), "interval": interval, "limit": limit}
+            # Limit logic for Binance (Max 1000 per request)
+            BINANCE_LIMIT = 1000
             
-            if start_date:
-                params["startTime"] = int(datetime.strptime(start_date, "%Y-%m-%d").timestamp() * 1000)
-            if end_date:
-                params["endTime"] = int(datetime.strptime(end_date, "%Y-%m-%d").timestamp() * 1000)
+            all_klines = []
+            remaining_limit = limit
             
-            # Obtém klines
-            klines = client.klines(**params)
+            # Start/End preparation
+            end_ts = int(datetime.strptime(end_date, "%Y-%m-%d").timestamp() * 1000) if end_date else int(time.time() * 1000)
+            start_ts = int(datetime.strptime(start_date, "%Y-%m-%d").timestamp() * 1000) if start_date else None
+            
+            # If no start date, calculate based on limit (approximate for loop)
+            # But the loop logic below relies on moving backwards or strictly forwards.
+            # Easiest way for simple historical without start_date is fetching backwards from NOW or END_DATE?
+            # Binance API standard is forward from startTime or backward from endTime if only endTime provided?
+            # Actually klines returns 'limit' interactions ending at endTime if provided.
+            
+            # Strategy: Loop getting 1000 candles until we have 'limit' candles
+            # Fetching backwards using endTime
+            
+            current_end_ts = end_ts
+            
+            while remaining_limit > 0:
+                fetch_limit = min(remaining_limit, BINANCE_LIMIT)
+                
+                params = {
+                    "symbol": symbol.upper(), 
+                    "interval": interval, 
+                    "limit": fetch_limit,
+                    "endTime": current_end_ts
+                }
+                
+                klines = client.klines(**params)
+                
+                if not klines:
+                    break
+                    
+                all_klines = klines + all_klines # Prepend new data (since we are fetching backwards)
+                remaining_limit -= len(klines)
+                
+                # Update end_ts to be the timestamp of the first candle in this batch - 1ms
+                first_candle_ts = klines[0][0]
+                current_end_ts = first_candle_ts - 1
+                
+                if len(klines) < fetch_limit:
+                     # No more data available
+                     break
             
             # Converte para DataFrame
-            df = pd.DataFrame(klines, columns=[
+            df = pd.DataFrame(all_klines, columns=[
                 "timestamp", "open", "high", "low", "close", "volume",
                 "close_time", "quote_volume", "trades", "taker_buy_base",
                 "taker_buy_quote", "ignore"
@@ -104,7 +140,11 @@ class DataManager:
             df = df.set_index("timestamp")
             df = df[["open", "high", "low", "close", "volume"]].astype(float)
             
-            print(f"[DataManager] Obtidos {len(df)} candles de {symbol} ({timeframe})")
+            # Remove duplicates just in case
+            df = df[~df.index.duplicated(keep='first')]
+            df = df.sort_index()
+            
+            print(f"[DataManager] Obtidos {len(df)} candles de {symbol} ({timeframe}) - Limit pedido: {limit}")
             return df
             
         except ImportError:
@@ -123,20 +163,6 @@ class DataManager:
     ) -> pd.DataFrame:
         """
         Obtém dados históricos via CCXT com paginação automática.
-        
-        VANTAGENS:
-        - Sem limite de candles (paginação automática)
-        - Suporta 100+ exchanges
-        - Dados desde o início do par
-        
-        Args:
-            symbol: Par de trading no formato CCXT (ex: BTC/USDT)
-            timeframe: Período das velas (1m, 5m, 15m, 1h, 4h, 1d)
-            days: Número de dias de histórico (sem limite!)
-            exchange_id: ID da exchange (binance, bybit, kraken, etc)
-            
-        Returns:
-            DataFrame com colunas: open, high, low, close, volume
         """
         try:
             import ccxt
@@ -209,12 +235,18 @@ class DataManager:
             
         except ImportError:
             print("[CCXT] ⚠️ ccxt não instalado. Instale com: pip install ccxt")
-            print("[CCXT] Usando fallback Binance API...")
-            return self.get_historical_data(symbol.replace("/", ""), timeframe, limit=1000)
+            print("[CCXT] Usando fallback Binance API com paginação manual...")
+            # Calculate limit based on timeframe (approx hours)
+            limit_needed = days * 24 
+            if timeframe == '1d': limit_needed = days
+            elif timeframe == '15m': limit_needed = days * 24 * 4
+            
+            return self.get_historical_data(symbol.replace("/", ""), timeframe, limit=limit_needed)
         except Exception as e:
             print(f"[CCXT] Erro: {e}")
-            print("[CCXT] Usando fallback Binance API...")
-            return self.get_historical_data(symbol.replace("/", ""), timeframe, limit=1000)
+            print("[CCXT] Usando fallback Binance API com paginação manual...")
+            limit_needed = days * 24 
+            return self.get_historical_data(symbol.replace("/", ""), timeframe, limit=limit_needed)
     
     def _generate_simulated_data(self, symbol: str, bars: int = 1000) -> pd.DataFrame:
         """

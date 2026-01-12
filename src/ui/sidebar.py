@@ -25,7 +25,36 @@ def render_sidebar():
     """Renderiza a sidebar completa."""
     
     with st.sidebar:
-        st.header("⚙️ Configurações Trading")
+        # --- BRANDING ---
+        st.markdown("""
+        <div style="text-align: left; padding: 10px 0; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="
+                    width: 40px; height: 40px; 
+                    background: linear-gradient(135deg, #6366f1, #0ea5e9);
+                    border-radius: 8px;
+                    display: flex; align-items: center; justify-content: center;
+                    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
+                ">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"></path>
+                        <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"></path>
+                        <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"></path>
+                        <path d="M17.599 6.5a3 3 0 0 0 .399-1.375"></path>
+                        <path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path>
+                        <path d="M3.477 12.578a4 4 0 0 1 .363-4.309"></path>
+                        <path d="M20.124 8.269a4 4 0 0 1 .363 4.309"></path>
+                    </svg>
+                </div>
+                <div style="height: 40px; display: flex; flex-direction: column; justify-content: space-between;">
+                     <h1 style="margin: -2px 0 0 0; padding: 0; line-height: 1.0; font-size: 22px; font-weight: 800; background: linear-gradient(90deg, #f8fafc, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px;">Gastor</h1>
+                     <p style="margin: 0 0 -1px 0; padding: 0; line-height: 1.0; font-size: 10px; color: #64748b; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">Trading Analyzer Studio</p>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("### Settings") # Clean header
         
         # Configuração de Saldo Inicial
         if 'initial_balance' not in st.session_state:
@@ -48,13 +77,13 @@ def render_sidebar():
             on_change=reset_account
         )
         
-        if st.button("🔄 Resetar Conta"):
+        if st.button("Resetar Conta"):
             reset_account()
             st.rerun()
 
         st.divider()
         
-        st.header("📈 Dados de Mercado")
+        st.markdown("### Dados de Mercado")
         
         if 'sb_coin' not in st.session_state:
             st.session_state.sb_coin = COINS[0]
@@ -74,7 +103,7 @@ def render_sidebar():
         )
         days = st.slider("Dias de histórico", 30, 180, 90)
         
-        if st.button("📥 Carregar Dados", type="primary"):
+        if st.button("Carregar Dados", type="primary"):
             with st.spinner("Carregando..."):
                 df = load_data(st.session_state.sb_coin_widget, days)
                 st.session_state.df = df
@@ -83,7 +112,7 @@ def render_sidebar():
         
         st.divider()
         
-        st.header("💰 Portfólio")
+        st.markdown("### Portfólio")
         current_price = 0
         if st.session_state.df is not None:
             idx = st.session_state.get('selected_index', 0)
@@ -98,11 +127,11 @@ def render_sidebar():
         
         st.divider()
 
-        if st.button("💾 Salvar Trades"):
+        if st.button("Salvar Trades", icon=":material/save:"):
             filepath = save_trades()
             st.success(f"Salvo em {filepath}")
 
-        if st.button("📂 Carregar Trades Salvos"):
+        if st.button("Carregar Trades Salvos", icon=":material/file_upload:"):
             _load_trades_from_file(selected_coin)
     
     return selected_coin, days
@@ -125,7 +154,7 @@ def _load_trades_from_file(selected_coin: str):
                 if st.session_state.sb_coin != trade_coin:
                     st.session_state.sb_coin = trade_coin
                     st.session_state.sb_coin_widget = trade_coin
-                    st.toast(f"Trocando moeda para {trade_coin}...", icon="🔄")
+                    st.toast(f"Trocando moeda para {trade_coin}...")
                     st.rerun()
                     
                 if st.session_state.df is None:
@@ -164,7 +193,7 @@ def _load_trades_from_file(selected_coin: str):
                         st.session_state.balance += (rev - fee)
                         st.session_state.holdings -= amt
                 
-                st.toast("Trades carregados e portfólio atualizado!", icon="✅")
+                st.toast("Trades carregados e portfólio atualizado!")
                 st.rerun()
             else:
                 st.warning("Arquivo de trades está vazio.")

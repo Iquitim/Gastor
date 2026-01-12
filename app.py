@@ -50,8 +50,20 @@ def main():
     # Inicializa estado
     init_session_state()
     
+    # CSS Fix for Title Alignment
+    st.markdown("""
+        <style>
+               .block-container {
+                    padding-top: 1.8rem;
+                    padding-bottom: 0rem;
+                    padding-left: 5rem;
+                    padding-right: 5rem;
+                }
+        </style>
+        """, unsafe_allow_html=True)
+
     # Header
-    st.title("📊 Gastor | Trading Analyzer")
+    st.title("Trading Analyzer")
     st.markdown("Marque trades manualmente para criar dataset de treinamento")
     
     # Sidebar
@@ -103,7 +115,7 @@ def main():
             render_strategies_tab(df)
     
     else:
-        st.info("🔄 Carregue dados de mercado na sidebar para começar.")
+        st.info("Carregue dados de mercado na sidebar para começar.")
 
 
 if __name__ == "__main__":
