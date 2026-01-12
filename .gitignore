@@ -1,0 +1,103 @@
+# =====================
+# Ambiente Virtual
+# =====================
+venv/
+.venv/
+env/
+
+# =====================
+# Variáveis de Ambiente
+# =====================
+.env
+.env.local
+.env.*.local
+
+# =====================
+# Python
+# =====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# =====================
+# Logs
+# =====================
+logs/
+*.log
+
+# =====================
+# IDE / Editor
+# =====================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# =====================
+# Dados Locais
+# =====================
+data/
+*.csv
+*.parquet
+
+# =====================
+# MetaTrader
+# =====================
+*.set
+
+# =====================
+# Modelos ML (grandes)
+# =====================
+*.joblib
+*.pkl
+*.h5
+*.pt
+*.pth
+model_*.joblib
+
+# =====================
+# Streamlit
+# =====================
+.streamlit/secrets.toml
+
+# =====================
+# Arquivos do Sistema
+# =====================
+.DS_Store
+Thumbs.db
+*.bak
+*.tmp
+
+# =====================
+# Jupyter Notebooks
+# =====================
+.ipynb_checkpoints/
+*.ipynb
+
+# =====================
+# Dados do Projeto (mantidos localmente)
+# =====================
+# trades.json  # Descomente para ignorar trades locais

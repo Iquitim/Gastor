@@ -1,0 +1,222 @@
+[
+  {
+    "id": 1,
+    "action": "BUY",
+    "price": 191.23,
+    "amount": 0.522930502536213,
+    "timestamp": "2025-10-12 15:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 149.9,
+    "holdings_after": 0.522930502536213,
+    "created_at": "2026-01-10T11:59:58.434009"
+  },
+  {
+    "id": 2,
+    "action": "SELL",
+    "price": 196.8,
+    "amount": 0.522930502536213,
+    "timestamp": "2025-10-12 20:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 252.70981017622762,
+    "holdings_after": 0.0,
+    "created_at": "2026-01-10T12:00:08.351650"
+  },
+  {
+    "id": 3,
+    "action": "BUY",
+    "price": 194.81,
+    "amount": 0.5133206714234382,
+    "timestamp": "2025-10-13 03:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 152.60981017622763,
+    "holdings_after": 0.5133206714234382,
+    "created_at": "2026-01-10T12:00:27.891756"
+  },
+  {
+    "id": 4,
+    "action": "SELL",
+    "price": 198.25,
+    "amount": 0.5133206714234382,
+    "timestamp": "2025-10-13 08:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 254.27386746281456,
+    "holdings_after": 0.0,
+    "created_at": "2026-01-10T12:00:36.710506"
+  },
+  {
+    "id": 5,
+    "action": "BUY",
+    "price": 191.84,
+    "amount": 0.5212677231025855,
+    "timestamp": "2025-10-13 12:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 154.17386746281457,
+    "holdings_after": 0.5212677231025855,
+    "created_at": "2026-01-10T12:00:45.234539"
+  },
+  {
+    "id": 6,
+    "action": "SELL",
+    "price": 205.01,
+    "amount": 0.5212677231025855,
+    "timestamp": "2025-10-13 17:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 260.93209828016234,
+    "holdings_after": 0.0,
+    "created_at": "2026-01-10T12:00:56.846164"
+  },
+  {
+    "id": 7,
+    "action": "BUY",
+    "price": 195.31,
+    "amount": 0.5120065536838871,
+    "timestamp": "2025-10-14 06:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 160.83209828016234,
+    "holdings_after": 0.5120065536838871,
+    "created_at": "2026-01-10T12:01:35.202070"
+  },
+  {
+    "id": 8,
+    "action": "SELL",
+    "price": 202.22,
+    "amount": 0.5120065536838871,
+    "timestamp": "2025-10-14 15:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 264.26652560083204,
+    "holdings_after": 0.0,
+    "created_at": "2026-01-10T12:01:48.032653"
+  },
+  {
+    "id": 9,
+    "action": "BUY",
+    "price": 194.81,
+    "amount": 0.5133206714234382,
+    "timestamp": "2025-10-15 19:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 164.16652560083205,
+    "holdings_after": 0.5133206714234382,
+    "created_at": "2026-01-10T12:02:18.734517"
+  },
+  {
+    "id": 10,
+    "action": "SELL",
+    "price": 197.02,
+    "amount": 0.5133206714234382,
+    "timestamp": "2025-10-16 12:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 265.19982984599403,
+    "holdings_after": 0.0,
+    "created_at": "2026-01-10T12:02:39.546498"
+  },
+  {
+    "id": 11,
+    "action": "BUY",
+    "price": 182.83,
+    "amount": 0.5469561888092763,
+    "timestamp": "2025-10-16 20:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 165.09982984599404,
+    "holdings_after": 0.5469561888092763,
+    "created_at": "2026-01-10T12:02:52.174735"
+  },
+  {
+    "id": 12,
+    "action": "SELL",
+    "price": 186.34,
+    "amount": 0.5469561888092763,
+    "timestamp": "2025-10-18 06:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 266.9177262524919,
+    "holdings_after": 0.0,
+    "created_at": "2026-01-10T12:03:28.385584"
+  },
+  {
+    "id": 13,
+    "action": "BUY",
+    "price": 186.59,
+    "amount": 0.5359344016292406,
+    "timestamp": "2025-10-18 20:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 166.8177262524919,
+    "holdings_after": 0.5359344016292406,
+    "created_at": "2026-01-10T12:04:05.879419"
+  },
+  {
+    "id": 14,
+    "action": "SELL",
+    "price": 190.6,
+    "amount": 0.5359344016292406,
+    "timestamp": "2025-10-19 13:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 268.86467410607463,
+    "holdings_after": 0.0,
+    "created_at": "2026-01-10T12:04:25.199471"
+  },
+  {
+    "id": 15,
+    "action": "BUY",
+    "price": 185.62,
+    "amount": 0.5387350501023597,
+    "timestamp": "2025-10-20 00:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 168.76467410607464,
+    "holdings_after": 0.5387350501023597,
+    "created_at": "2026-01-10T12:04:54.556063"
+  },
+  {
+    "id": 16,
+    "action": "SELL",
+    "price": 191.21,
+    "amount": 0.5387350501023597,
+    "timestamp": "2025-10-20 03:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 271.67319150721676,
+    "holdings_after": 0.0,
+    "created_at": "2026-01-10T12:05:00.788760"
+  },
+  {
+    "id": 17,
+    "action": "BUY",
+    "price": 187.54,
+    "amount": 0.5332195798229711,
+    "timestamp": "2025-10-20 16:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 171.5731915072168,
+    "holdings_after": 0.5332195798229711,
+    "created_at": "2026-01-10T12:05:21.170571"
+  },
+  {
+    "id": 18,
+    "action": "SELL",
+    "price": 192.75,
+    "amount": 0.5332195798229711,
+    "timestamp": "2025-10-21 14:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 274.2484874440836,
+    "holdings_after": 0.0,
+    "created_at": "2026-01-10T12:05:43.714584"
+  },
+  {
+    "id": 19,
+    "action": "BUY",
+    "price": 185.63,
+    "amount": 0.5387060281204546,
+    "timestamp": "2025-10-21 23:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 174.1484874440836,
+    "holdings_after": 0.5387060281204546,
+    "created_at": "2026-01-10T12:06:07.679527"
+  },
+  {
+    "id": 20,
+    "action": "SELL",
+    "price": 187.43,
+    "amount": 0.5387060281204546,
+    "timestamp": "2025-10-23 06:00:00",
+    "coin": "SOL/USDT",
+    "balance_after": 275.0171886238498,
+    "holdings_after": 0.0,
+    "created_at": "2026-01-10T12:06:44.663525"
+  }
+]
