@@ -49,6 +49,19 @@ flowchart LR
 4. **📈 O sistema valida** a estratégia em dados futuros (Out-of-Time) que você nunca viu
 5. **🤖 O modelo prevê** onde comprar/vender em novos dados
 
+
+### 🚫 O que o Gastor NÃO é
+
+Para alinhar expectativas, é importante definir o escopo do projeto:
+
+| NÃO É ❌ | É ✅ |
+|----------|------|
+| Um robô de execução automática ("Black Box") | Uma **plataforma de pesquisa** (Research) |
+| Um sistema de recomendação financeira | Uma ferramenta de **aprendizado supervisionado** |
+| Um oráculo previsor de preço | Um sistema probabilístico baseado em **seus dados** |
+
+> **Objetivo:** O Gastor não opera por você. Ele amplifica sua capacidade de análise permitindo testar se sua intuição resiste a dados estatísticos.
+
 ---
 
 ## 🎯 Para que servem os Trades Manuais?
@@ -88,6 +101,19 @@ flowchart TB
 - 🟢 **Trades manuais** = Gabarito para o ML
 - 🟣 **ML Studio** = Aprende o padrão dos seus trades
 - 🟡 **Modelo Treinado** = Prevê novos trades automaticamente
+
+---
+
+---
+
+## 🎓 Por que usar o Gastor? (Valor Educacional)
+
+Mais do que uma ferramenta de trading, este projeto é um laboratório prático para:
+
+*   🤖 **Aprender ML Financeiro:** Entenda na prática como algoritmos (Random Forest, XGBoost) "enxergam" o mercado.
+*   📉 **Visualizar Overfitting:** Veja como estratégias que parecem perfeitas no passado falham no Out-of-Time.
+*   🧠 **Identificar Viés Cognitivo:** Compare sua performance manual vs a do modelo para descobrir onde você hesita ou se precipita.
+*   ⚖️ **Humano vs Máquina:** Teste a hipótese do "Centauro" (Humano + AI > Humano ou AI sozinhos).
 
 ---
 
@@ -233,7 +259,19 @@ flowchart LR
 | **XGBoost** | Mais preciso, requer ajuste |
 | **LightGBM** | Rápido, bom para grandes datasets |
 
-**Out-of-Time (OOT):** Os últimos 30 dias são **ocultos** durante o treinamento para validação real!
+**Metodologia de Validação (OOT vs Split Tradicional):**
+
+> ⚠️ **Diferença Importante:** O Gastor não usa divisão aleatória (70/30) para validar o modelo.
+> 1. **Treino:** O modelo usa **100% dos seus trades manuais** para aprender o padrão com máxima eficácia.
+> 2. **Validação:** A prova real acontece no **Out-of-Time (OOT)**. Os últimos 30 dias de dados são **ocultos** (blind) durante o treino e usados apenas para testar se a estratégia funciona em "dados futuros". Isso simula a realidade do mercado e evita vício (overfitting).
+
+**Target Labeling (Imitation Learning):**
+
+> Diferente de sistemas tradicionais que usam janelas fixas (ex: "subiu 2% em 20 candles"), o Gastor utiliza **Rótulos Definidos pelo Trader (Human-Defined Labels)**.
+>
+> *   **Abordagem:** O alvo (target) é a sua decisão explícita de entrada.
+> *   **Objetivo:** O ML atua como um sistema de **Imitation Learning**, aprendendo a replicar os setups que *você* identificou como válidos.
+> *   **Horizonte:** O horizonte de retorno é implícito na sua análise discricionária, permitindo capturar setups complexos que regras fixas de tempo perderiam.
 
 ---
 
