@@ -32,22 +32,22 @@ def create_chart(df: pd.DataFrame, trades: list, focus_idx: int = None, zoom_lev
         row=1, col=1
     )
     
-    # EMAs
-    fig.add_trace(go.Scatter(x=df.index, y=df['ema9'], name='EMA 9', line=dict(color='blue', width=1)), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df.index, y=df['ema21'], name='EMA 21', line=dict(color='orange', width=1)), row=1, col=1)
+    # EMAs - Cool Spectrum (Cyan & Indigo)
+    fig.add_trace(go.Scatter(x=df.index, y=df['ema9'], name='EMA 9', line=dict(color='#06b6d4', width=1)), row=1, col=1) # Cyan 500
+    fig.add_trace(go.Scatter(x=df.index, y=df['ema21'], name='EMA 21', line=dict(color='#6366f1', width=1)), row=1, col=1) # Indigo 500
     
-    # Bollinger Bands
-    fig.add_trace(go.Scatter(x=df.index, y=df['bb_upper'], name='BB Upper', line=dict(color='gray', width=1, dash='dot')), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df.index, y=df['bb_lower'], name='BB Lower', line=dict(color='gray', width=1, dash='dot')), row=1, col=1)
+    # Bollinger Bands - Subtle Slate
+    fig.add_trace(go.Scatter(x=df.index, y=df['bb_upper'], name='BB Upper', line=dict(color='#334155', width=1, dash='dot')), row=1, col=1) # Slate 700
+    fig.add_trace(go.Scatter(x=df.index, y=df['bb_lower'], name='BB Lower', line=dict(color='#334155', width=1, dash='dot')), row=1, col=1)
     
-    # RSI
-    fig.add_trace(go.Scatter(x=df.index, y=df['rsi'], name='RSI', line=dict(color='purple')), row=2, col=1)
-    fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1)
-    fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1)
+    # RSI - Violet Accent
+    fig.add_trace(go.Scatter(x=df.index, y=df['rsi'], name='RSI', line=dict(color='#8b5cf6', width=2)), row=2, col=1) # Violet 500
+    fig.add_hline(y=70, line_dash="dash", line_color="#ef4444", row=2, col=1) # Red
+    fig.add_hline(y=30, line_dash="dash", line_color="#10b981", row=2, col=1) # Emerald
     
-    # MACD
-    fig.add_trace(go.Scatter(x=df.index, y=df['macd'], name='MACD', line=dict(color='blue')), row=3, col=1)
-    fig.add_trace(go.Scatter(x=df.index, y=df['macd_signal'], name='Signal', line=dict(color='orange')), row=3, col=1)
+    # MACD - Teal & Indigo Harmony
+    fig.add_trace(go.Scatter(x=df.index, y=df['macd'], name='MACD', line=dict(color='#2dd4bf')), row=3, col=1) # Teal 400
+    fig.add_trace(go.Scatter(x=df.index, y=df['macd_signal'], name='Signal', line=dict(color='#6366f1')), row=3, col=1) # Indigo 500
     
     # Marcadores de trades
     for trade in trades:

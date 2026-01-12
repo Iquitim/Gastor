@@ -1,0 +1,150 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* =========================================================================
+   GASTOR FINTECH PRO - SLATE & INDIGO
+   ========================================================================= */
+
+/* GLOBAL RESET */
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
+    color: #cbd5e1; /* Slate 300 - Great readability on dark */
+    background-color: #020617; /* Slate 950 */
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #f8fafc; /* Slate 50 - High contrast headers */
+    font-weight: 600 !important;
+    letter-spacing: -0.02em;
+}
+
+/* -------------------------------------------------------------------------
+   HEADER & SIDEBAR
+   ------------------------------------------------------------------------- */
+header[data-testid="stHeader"] {
+    background: #020617; /* Solid background for solidity */
+    border-bottom: 1px solid #1e293b; /* Slate 800 separator */
+}
+
+[data-testid="stSidebar"] {
+    background-color: #020617; /* Match main bg for seamless look */
+    border-right: 1px solid #1e293b;
+}
+
+/* Sidebar Inputs */
+[data-testid="stSidebar"] .stSelectbox > div > div, 
+[data-testid="stSidebar"] .stNumberInput > div > div {
+    background-color: #0f172a; /* Slate 900 */
+    border: 1px solid #334155; /* Slate 700 */
+    color: #f1f5f9;
+}
+
+div[class*="stDecoration"] {
+    background-image: linear-gradient(90deg, #6366f1, #0ea5e9); /* Indigo -> Sky */
+    height: 3px;
+}
+
+/* -------------------------------------------------------------------------
+   SOLID CARDS ("The Professional Look")
+   ------------------------------------------------------------------------- */
+.glass-card {
+    background-color: #0f172a; /* Slate 900 - Distinct Surface */
+    border: 1px solid #1e293b; /* Slate 800 - Subtle definition */
+    border-radius: 8px; /* Standard modern radius */
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: all 0.2s ease;
+}
+
+.glass-card:hover {
+    border-color: #334155; /* Lighter border on hover */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+/* Card Metrics */
+.glass-card .card-label {
+    color: #94a3b8; /* Slate 400 - Muted label */
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.glass-card .card-value {
+    color: #f8fafc; /* Slate 50 - Bright Value */
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+
+.glass-card .card-icon {
+    color: #6366f1; /* Indigo Primary */
+    font-size: 1.25rem;
+}
+
+/* -------------------------------------------------------------------------
+   BUTTONS
+   ------------------------------------------------------------------------- */
+.stButton > button {
+    border-radius: 6px;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s;
+}
+
+/* Primary - Indigo Solid */
+.stButton > button[kind="primary"] {
+    background-color: #6366f1;
+    color: white;
+    border: 1px solid #6366f1;
+}
+.stButton > button[kind="primary"]:hover {
+    background-color: #4f46e5;
+    border-color: #4f46e5;
+}
+
+/* Secondary - Slate Outline */
+.stButton > button[kind="secondary"] {
+    background-color: transparent;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+}
+.stButton > button[kind="secondary"]:hover {
+    background-color: #1e293b;
+    border-color: #475569;
+    color: white;
+}
+
+/* -------------------------------------------------------------------------
+   TABS
+   ------------------------------------------------------------------------- */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 24px;
+    border-bottom: 1px solid #1e293b;
+    margin-bottom: 24px;
+}
+
+.stTabs [data-baseweb="tab"] {
+    height: auto;
+    background-color: transparent;
+    padding-bottom: 12px;
+    color: #64748b; /* Slate 500 */
+    border: none;
+    font-weight: 500;
+}
+
+.stTabs [aria-selected="true"] {
+    color: #6366f1 !important; /* Indigo */
+    border-bottom: 2px solid #6366f1 !important;
+    font-weight: 600;
+}
+
+/* -------------------------------------------------------------------------
+   CHARTS & METRICS
+   ------------------------------------------------------------------------- */
+/* Metric Delta Colors */
+[data-testid="stMetricDelta"] svg {
+    display: none; /* Hide default arrows if using custom ones, or keep clean */
+}
