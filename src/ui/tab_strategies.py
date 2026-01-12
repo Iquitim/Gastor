@@ -20,10 +20,10 @@ def render_strategies_tab(df):
     # Info sobre período usado
     strat_start = str(strategy_df.index[0])[:10]
     strat_end = str(strategy_df.index[-1])[:10]
-    st.success(f"📊 **Período para estratégias:** {strat_start} a {strat_end} ({len(strategy_df)} candles) - *Sem corte OOT*")
+    st.success(f"**Período para estratégias:** {strat_start} a {strat_end} ({len(strategy_df)} candles) - *Sem corte OOT*")
     
     # Configuração global de position size
-    st.info("⚙️ **Configuração de Investimento**")
+    st.info("**Configuração de Investimento**")
     
     config_cols = st.columns([2, 1])
     
@@ -32,7 +32,7 @@ def render_strategies_tab(df):
             st.session_state.strategy_position_size = 100
             
         position_size = st.slider(
-            "💰 Tamanho da Posição (% do saldo por operação)",
+            ":material/pie_chart: Tamanho da Posição (% do saldo por operação)",
             min_value=10,
             max_value=100,
             value=st.session_state.strategy_position_size,
@@ -45,10 +45,10 @@ def render_strategies_tab(df):
     with config_cols[1]:
         initial_bal = st.session_state.get('initial_balance', 10000.0)
         trade_value = initial_bal * position_size / 100
-        st.metric("💵 Valor por Trade", f"${trade_value:,.0f}")
+        st.metric(":material/attach_money: Valor por Trade", f"${trade_value:,.0f}")
     
     force_close = st.checkbox(
-        "📌 Forçar fechamento no fim do período",
+        ":material/push_pin: Forçar fechamento no fim do período",
         value=True,
         help="Se houver posição aberta no último candle, adiciona SELL automático",
         key="force_close_checkbox"
@@ -59,14 +59,14 @@ def render_strategies_tab(df):
     # Agrupa estratégias por categoria
     if STRATEGIES:
         CATEGORY_NAMES = {
-            "trend": "📈 Tendência",
-            "reversal": "🔄 Reversão",
-            "momentum": "⚡ Momentum",
-            "hybrid": "🔗 Híbridas",
-            "breakout": "🚀 Breakout",
-            "volume": "📊 Volume",
-            "oscillator": "🎢 Osciladores",
-            "volatility": "🌊 Volatilidade"
+            "trend": "Tendência",
+            "reversal": "Reversão",
+            "momentum": "Momentum",
+            "hybrid": "Híbridas",
+            "breakout": "Breakout",
+            "volume": "Volume",
+            "oscillator": "Osciladores",
+            "volatility": "Volatilidade"
         }
         
         # Ordem fixa das categorias para consistência
@@ -92,14 +92,18 @@ def render_strategies_tab(df):
         if current_idx >= len(cat_list):
             current_idx = 0
             st.session_state.selected_strategy_category = 0
-        
-        selected_cat_idx = st.selectbox(
-            "🏷️ Categoria de Estratégias",
-            range(len(cat_list)),
-            index=current_idx,
-            format_func=lambda x: f"{cat_display[x]} ({len(categories[cat_list[x]])} estratégias)",
-            key="strategy_category_select"
-        )
+            
+        # Container Card para destaque visual
+        with st.container(border=True):
+            st.markdown("#### :material/filter_list: Filtrar Categoria")
+            selected_cat_idx = st.selectbox(
+                "Categoria de Estratégias",
+                range(len(cat_list)),
+                index=current_idx,
+                format_func=lambda x: f"{cat_display[x]} ({len(categories[cat_list[x]])} estratégias)",
+                key="strategy_category_select",
+                label_visibility="collapsed"
+            )
         
         # Atualiza session_state quando mudar
         if selected_cat_idx != st.session_state.selected_strategy_category:
@@ -119,7 +123,7 @@ def render_strategies_tab(df):
         st.caption(cat_descriptions.get(selected_cat, ""))
         
         strategy_list = categories[selected_cat]
-        strat_tab_names = [f"{cls.icon} {cls.name}" for _, cls in strategy_list]
+        strat_tab_names = [f"{cls.name}" for _, cls in strategy_list]
         strat_tabs = st.tabs(strat_tab_names)
         
         for strat_tab, (slug, strategy_class) in zip(strat_tabs, strategy_list):
@@ -127,10 +131,10 @@ def render_strategies_tab(df):
                 strategy = strategy_class()
                 
                 st.markdown(strategy.explanation)
-                st.info(f"💡 **Ideal para:** {strategy.ideal_for}")
+                st.info(f"**Ideal para:** {strategy.ideal_for}")
                 
                 st.markdown("---")
-                st.markdown("**⚙️ Parâmetros**")
+                st.markdown("**:material/settings: Parâmetros**")
                 
                 params = {}
                 param_cols = st.columns(len(strategy.parameters)) if strategy.parameters else [st]
@@ -146,7 +150,7 @@ def render_strategies_tab(df):
                             key=f"param_{slug}_{param_name}"
                         )
                 
-                if st.button(f"🚀 Aplicar {strategy.name}", use_container_width=True, key=f"btn_{slug}"):
+                if st.button(f"Aplicar {strategy.name}", use_container_width=True, key=f"btn_{slug}", icon=":material/rocket_launch:"):
                     raw_trades = strategy.apply(strategy_df, **params)
                     
                     initial_balance = st.session_state.get('initial_balance', 10000.0)
@@ -168,7 +172,7 @@ def render_strategies_tab(df):
                     combined = current + adjusted_trades
                     recalculate_portfolio(combined)
                     
-                    st.success(f"✅ Adicionados {len(adjusted_trades)} trades de {strategy.name}!")
+                    st.success(f"Adicionados {len(adjusted_trades)} trades de {strategy.name}!")
                     st.rerun()
     else:
         st.warning("Nenhuma estratégia disponível.")
@@ -177,6 +181,6 @@ def render_strategies_tab(df):
     
     # Mostra resumo de trades atual (referência)
     if st.session_state.trades:
-        st.caption(f"📊 **Trades atuais:** {len(st.session_state.trades)} operações registradas")
+        st.caption(f"**Trades atuais:** {len(st.session_state.trades)} operações registradas")
     else:
         st.caption("Nenhum trade registrado ainda.")

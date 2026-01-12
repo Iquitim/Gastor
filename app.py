@@ -92,10 +92,10 @@ def main():
         
         # ===================== TABS PRINCIPAIS =====================
         tab_trading, tab_results, tab_ml, tab_strategies = st.tabs([
-            "📈 Trading", 
-            "📊 Resultados",
-            "🧠 ML Studio",
-            "🧪 Laboratório de Estratégias"
+            ":material/trending_up: Trading", 
+            ":material/bar_chart: Resultados",
+            ":material/psychology: ML Studio",
+            ":material/science: Laboratório de Estratégias"
         ])
         
         # TAB 1: TRADING

@@ -26,29 +26,26 @@ def render_sidebar():
     
     with st.sidebar:
         # --- BRANDING ---
-        st.markdown("""
+        # --- BRANDING ---
+        # Carrega imagem dinamicamente
+        logo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'image', 'gastor.png')
+        img_base64 = ""
+        if os.path.exists(logo_path):
+            import base64
+            with open(logo_path, "rb") as image_file:
+                img_base64 = base64.b64encode(image_file.read()).decode()
+        
+        logo_html = f'<img src="data:image/png;base64,{img_base64}" style="width: 100%; height: 100%; object-fit: contain;">' if img_base64 else ""
+
+        st.markdown(f"""
         <div style="text-align: left; padding: 10px 0; margin-bottom: 20px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="
-                    width: 40px; height: 40px; 
-                    background: linear-gradient(135deg, #6366f1, #0ea5e9);
-                    border-radius: 8px;
-                    display: flex; align-items: center; justify-content: center;
-                    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
-                ">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"></path>
-                        <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"></path>
-                        <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"></path>
-                        <path d="M17.599 6.5a3 3 0 0 0 .399-1.375"></path>
-                        <path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path>
-                        <path d="M3.477 12.578a4 4 0 0 1 .363-4.309"></path>
-                        <path d="M20.124 8.269a4 4 0 0 1 .363 4.309"></path>
-                    </svg>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
+                    {logo_html}
                 </div>
-                <div style="height: 40px; display: flex; flex-direction: column; justify-content: space-between;">
-                     <h1 style="margin: -2px 0 0 0; padding: 0; line-height: 1.0; font-size: 22px; font-weight: 800; background: linear-gradient(90deg, #f8fafc, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px;">Gastor</h1>
-                     <p style="margin: 0 0 -1px 0; padding: 0; line-height: 1.0; font-size: 10px; color: #64748b; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">Trading Analyzer Studio</p>
+                <div style="height: 75px; display: flex; flex-direction: column; justify-content: center;">
+                     <h1 style="margin: 0; padding: 0; line-height: 1.2; font-size: 28px; font-weight: 800; background: linear-gradient(90deg, #f8fafc, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px;">Gastor</h1>
+                     <p style="margin: 0; padding: 0; line-height: 1.0; font-size: 11px; color: #64748b; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">Trading Analyzer Studio</p>
                 </div>
             </div>
         </div>
@@ -121,9 +118,14 @@ def render_sidebar():
         portfolio_value = st.session_state.balance + (st.session_state.holdings * current_price)
         pnl_total = ((portfolio_value - st.session_state.initial_balance) / st.session_state.initial_balance) * 100
         
+        if abs(pnl_total) < 0.001:
+            delta_val = None
+        else:
+            delta_val = f"{pnl_total:+.2f}%"
+            
         st.metric("Saldo Disponível", f"${st.session_state.balance:,.2f}")
         st.metric("Posição (Moedas)", f"{st.session_state.holdings:.4f} {selected_coin.split('/')[0]}")
-        st.metric("Valor Total", f"${portfolio_value:,.2f}", delta=f"{pnl_total:+.2f}%")
+        st.metric("Valor Total", f"${portfolio_value:,.2f}", delta=delta_val)
         
         st.divider()
 
