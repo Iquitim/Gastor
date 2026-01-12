@@ -121,7 +121,7 @@ Mais do que uma ferramenta de trading, este projeto é um laboratório prático 
 
 ```bash
 # Clone e configure
-git clone https://github.com/seu-repo/gastor.git
+git clone https://github.com/Iquitim/Gastor.git
 cd gastor
 
 # Ambiente virtual
