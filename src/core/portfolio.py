@@ -4,6 +4,7 @@ Handles trade sanitization, position sizing and recalculation.
 """
 
 import streamlit as st
+import pandas as pd
 
 
 def sanitize_trades(trades: list) -> list:
@@ -147,3 +148,62 @@ def recalculate_portfolio(trades: list) -> None:
             if st.session_state.holdings <= 0.0001:
                 st.session_state.holdings = 0.0
                 st.session_state.avg_price = 0.0
+                
+                
+def get_portfolio_at(trades: list, target_timestamp) -> dict:
+    """
+    Calcula o estado do portfólio em um momento específico (time-travel).
+    Retorna dict com balance, holdings, avg_price.
+    """
+    from .config import get_total_fee
+    
+    # Filtra trades até o momento atual
+    # Precisamos sanitizar TUDO primeiro para manter a lógica consistente
+    clean_trades = sanitize_trades(trades)
+    
+    # Filtra por timestamp
+    # Converte para timestamp do pandas para garantir comparação correta
+    target_ts = pd.to_datetime(target_timestamp)
+    relevant_trades = [t for t in clean_trades if pd.to_datetime(t['timestamp']) <= target_ts]
+    
+    # Estado inicial
+    balance = st.session_state.get('initial_balance', 10000.0)
+    holdings = 0.0
+    avg_price = 0.0
+    
+    coin = st.session_state.get('sb_coin', 'SOL/USDT')
+    fee_rate = get_total_fee(coin)
+    
+    for t in relevant_trades:
+        action = t.get('action', '').upper()
+        price = float(t.get('price', 0))
+        amount = float(t.get('amount', 0))
+        
+        if action == 'BUY':
+            cost = amount * price
+            fee = cost * fee_rate
+            
+            total_holdings = holdings + amount
+            if total_holdings > 0:
+                curr_val = holdings * avg_price
+                new_val = amount * price
+                avg_price = (curr_val + new_val) / total_holdings
+            
+            balance -= (cost + fee)
+            holdings = total_holdings
+            
+        elif action == 'SELL':
+            revenue = amount * price
+            fee = revenue * fee_rate
+            balance += (revenue - fee)
+            holdings -= amount
+            
+            if holdings <= 0.0001:
+                holdings = 0.0
+                avg_price = 0.0
+                
+    return {
+        'balance': balance,
+        'holdings': holdings,
+        'avg_price': avg_price
+    }

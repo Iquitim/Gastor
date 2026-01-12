@@ -206,13 +206,13 @@ def calculate_metrics(trades: list, evolution_df: pd.DataFrame, initial_balance:
 def render_results_tab(df):
     """Renderiza a tab de Resultados."""
     
-    st.markdown("### 📊 Dashboard de Performance")
+    st.markdown("### :material/analytics: Dashboard de Performance")
     
     trades = st.session_state.get('trades', [])
     initial_balance = st.session_state.get('initial_balance', 10000.0)
     
     if not trades:
-        st.info("🔄 Nenhum trade registrado. Execute estratégias ou marque trades manualmente para ver os resultados.")
+        st.info("Nenhum trade registrado. Execute estratégias ou marque trades manualmente para ver os resultados.")
         return
     
     # Calcula evolução do patrimônio (para gráfico)
@@ -252,7 +252,7 @@ def render_results_tab(df):
     with col1:
         # Patrimônio: positivo = verde/seta cima, negativo = vermelho/seta baixo
         st.metric(
-            "💰 Patrimônio Final",
+            ":material/attach_money: Patrimônio Final",
             f"${metrics['final_value']:,.2f}",
             delta=f"{metrics['total_pnl_pct']:+.2f}%"
             # delta_color padrão: positivo=verde, negativo=vermelho
@@ -261,14 +261,14 @@ def render_results_tab(df):
     with col2:
         # Lucro: positivo = verde, negativo = vermelho
         st.metric(
-            "📈 Lucro/Prejuízo",
+            ":material/trending_up: Lucro/Prejuízo",
             f"${metrics['total_pnl']:+,.2f}",
             delta=f"{metrics['total_pnl']:+,.2f}"
         )
     
     with col3:
         st.metric(
-            "🎯 Taxa de Acerto",
+            ":material/check_circle: Taxa de Acerto",
             f"{metrics['win_rate']:.1f}%",
             delta=f"{metrics['completed_trades']} trades completos",
             delta_color="off"  # Neutro
@@ -277,7 +277,7 @@ def render_results_tab(df):
     with col4:
         # Max Drawdown: sempre negativo, sem delta
         st.metric(
-            "📉 Max Drawdown",
+            ":material/trending_down: Max Drawdown",
             f"-{dd_metrics['max_drawdown_pct']:.2f}%",
             delta=str(dd_metrics['max_drawdown_date'])[:10] if dd_metrics['max_drawdown_date'] else "N/A",
             delta_color="off"  # Neutro (é só data)
@@ -289,20 +289,20 @@ def render_results_tab(df):
     col5, col6, col7, col8, col9 = st.columns(5)
     
     with col5:
-        st.metric("💵 Valor Investido", f"${initial_balance:,.2f}")
+        st.metric(":material/paid: Valor Investido", f"${initial_balance:,.2f}")
     
     with col6:
-        st.metric("📊 Total de Operações", f"{metrics['total_trades']}")
+        st.metric(":material/swap_horiz: Total de Operações", f"{metrics['total_trades']}")
     
     with col7:
         pf_display = f"{metrics['profit_factor']:.2f}" if metrics['profit_factor'] > 0 else "N/A"
-        st.metric("⚖️ Profit Factor", pf_display)
+        st.metric(":material/account_balance: Profit Factor", pf_display)
     
     with col8:
         # Drawdown atual: mostrar como negativo para ficar vermelho
         dd_value = -dd_metrics['current_drawdown_pct']  # Negativo para mostrar vermelho
         st.metric(
-            "📉 Drawdown Atual", 
+            ":material/waterfall_chart: Drawdown Atual", 
             f"-{dd_metrics['current_drawdown_pct']:.2f}%",
             delta=f"{dd_value:.2f}%"  # Negativo = vermelho com seta para baixo
         )
@@ -311,7 +311,7 @@ def render_results_tab(df):
         # Max Daily Loss
         daily_loss_value = -dd_metrics['max_daily_loss_pct']
         st.metric(
-            "📆 Max Loss Diária",
+            ":material/calendar_today: Max Loss Diária",
             f"-{dd_metrics['max_daily_loss_pct']:.2f}%",
             delta=dd_metrics['max_daily_loss_date'] if dd_metrics['max_daily_loss_date'] else "N/A",
             delta_color="off"
@@ -319,7 +319,7 @@ def render_results_tab(df):
     
     # ==================== GRÁFICOS ====================
     st.markdown("---")
-    st.markdown("### 📈 Evolução do Patrimônio")
+    st.markdown("### :material/show_chart: Evolução do Patrimônio")
     
     if not evolution_df.empty:
         # Gráfico de evolução
@@ -380,18 +380,18 @@ def render_results_tab(df):
     
     # ==================== DETALHES DOS TRADES ====================
     st.markdown("---")
-    st.markdown("### 📋 Detalhes das Operações")
+    st.markdown("### :material/list: Detalhes das Operações")
     
     detail_cols = st.columns(2)
     
     with detail_cols[0]:
-        st.markdown("**🟢 Melhores Trades**")
+        st.markdown("**:material/thumb_up: Melhores Trades**")
         if metrics['best_trade'] > 0:
             st.success(f"Melhor: +${metrics['best_trade']:,.2f}")
         else:
             st.info("Nenhum trade lucrativo ainda")
         
-        st.markdown("**📊 Média por Trade**")
+        st.markdown("**:material/functions: Média por Trade**")
         avg_color = "success" if metrics['avg_trade_pnl'] >= 0 else "error"
         if metrics['avg_trade_pnl'] >= 0:
             st.success(f"${metrics['avg_trade_pnl']:+,.2f}")
@@ -399,18 +399,18 @@ def render_results_tab(df):
             st.error(f"${metrics['avg_trade_pnl']:+,.2f}")
     
     with detail_cols[1]:
-        st.markdown("**🔴 Piores Trades**")
+        st.markdown("**:material/thumb_down: Piores Trades**")
         if metrics['worst_trade'] < 0:
             st.error(f"Pior: ${metrics['worst_trade']:,.2f}")
         else:
             st.info("Nenhuma perda registrada")
         
-        st.markdown("**📈 Compras vs Vendas**")
-        st.info(f"🟢 {metrics['buy_trades']} compras | 🔴 {metrics['sell_trades']} vendas")
+        st.markdown("**:material/compare_arrows: Compras vs Vendas**")
+        st.info(f":material/shopping_cart: {metrics['buy_trades']} compras | :material/sell: {metrics['sell_trades']} vendas")
     
     # ==================== COMPARATIVO FTMO ====================
     st.markdown("---")
-    st.markdown("### 🏆 Comparativo com FTMO Challenge")
+    st.markdown("### :material/emoji_events: Comparativo com FTMO Challenge")
     st.caption("Compare sua performance com os requisitos do FTMO Challenge para contas de $10k-$200k")
     
     # Regras do FTMO Challenge
@@ -483,14 +483,14 @@ def render_results_tab(df):
     
     with ftmo_cols[4]:
         if all_passed:
-            st.success("### 🎉 APROVADO!")
+            st.success("### :material/celebration: APROVADO!")
             st.caption("Você passaria no FTMO!")
         else:
-            st.error("### ❌ Reprovado")
+            st.error("### :material/cancel: Reprovado")
             st.caption("Ajuste sua estratégia.")
     
     # Gráfico de Radar comparativo
-    st.markdown("#### 📊 Radar de Performance vs FTMO")
+    st.markdown("#### :material/radar: Radar de Performance vs FTMO")
     
     # Normaliza valores para o radar (0-100%)
     # Lucro: 100% = atingiu a meta, 0% = 0 lucro, pode passar de 100%
@@ -554,7 +554,7 @@ def render_results_tab(df):
     st.plotly_chart(fig_radar, use_container_width=True)
     
     # Explicação das regras
-    with st.expander("ℹ️ Regras do FTMO Challenge"):
+    with st.expander(":material/info: Regras do FTMO Challenge"):
         st.markdown("""
         **FTMO Challenge** é um processo de avaliação para identificar traders qualificados:
         

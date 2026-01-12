@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from src.core.charting import create_chart
-from src.core.portfolio import recalculate_portfolio
+from src.core.portfolio import recalculate_portfolio, get_portfolio_at
 from src.core.data_loader import COMMISSION
 
 
@@ -46,25 +46,33 @@ def register_trade(action: str, price: float, amount: float, timestamp, coin: st
 def render_trading_tab(df, idx: int, current_price: float, current_time, selected_coin: str, update_slider, update_num):
     """Renderiza a tab de Trading."""
     
+    # --- TIME TRAVEL STATE ---
+    # Calcula estado do portfólio naquele momento específico
+    port_state = get_portfolio_at(st.session_state.trades, current_time)
+    
+    current_holdings = port_state['holdings']
+    current_avg_price = port_state['avg_price']
+    current_balance = port_state['balance']
+    
     # --- MINI STATUS BAR (Barra de contexto no topo) ---
     status_cols = st.columns([2, 2, 2, 2])
     with status_cols[0]:
-        st.metric("💰 Preço Atual", f"${current_price:.4f}")
+        st.metric(":material/attach_money: Preço Atual", f"${current_price:.4f}")
     with status_cols[1]:
-        st.metric("📅 Candle", str(current_time)[:16])
+        st.metric(":material/calendar_today: Candle", str(current_time)[:16])
     with status_cols[2]:
-        if st.session_state.holdings > 0:
-            pnl_pct = ((current_price - st.session_state.avg_price) / st.session_state.avg_price) * 100
-            st.metric("📈 Posição", f"{st.session_state.holdings:.4f}", delta=f"{pnl_pct:+.1f}%")
+        if current_holdings > 0:
+            pnl_pct = ((current_price - current_avg_price) / current_avg_price) * 100
+            st.metric(":material/show_chart: Posição", f"{current_holdings:.4f}", delta=f"{pnl_pct:+.1f}%")
         else:
-            st.metric("📈 Posição", "Sem posição")
+            st.metric(":material/show_chart: Posição", "Sem posição")
     with status_cols[3]:
-        st.metric("💵 Saldo", f"${st.session_state.balance:,.2f}")
+        st.metric(":material/wallet: Saldo", f"${current_balance:,.2f}")
     
     # Info do período com destaque visual
     start_date = str(df.index[0])[:10]
     end_date = str(df.index[-1])[:10]
-    st.info(f"📊 **Dados:** {start_date} a {end_date} ({len(df)} candles) • *+30 dias OOT para validação ML*")
+    st.info(f"**Dados:** {start_date} a {end_date} ({len(df)} candles) • *+30 dias OOT para validação ML*")
     
     st.divider()
     
@@ -73,7 +81,7 @@ def render_trading_tab(df, idx: int, current_price: float, current_time, selecte
     
     with nav_col1:
         st.slider(
-            "🕐 Navegue no Tempo",
+            ":material/schedule: Navegue no Tempo",
             0, len(df) - 1,
             value=idx,
             key='chart_slider',
@@ -131,7 +139,7 @@ def render_trading_tab(df, idx: int, current_price: float, current_time, selecte
     trade_col1, trade_col2, trade_col3 = st.columns(3)
     
     with trade_col1:
-        st.markdown("#### 🟢 Comprar")
+        st.markdown("#### :material/add_circle: Comprar")
         buy_mode = st.radio("Modo", ["Valor ($)", "% Saldo"], horizontal=True, key="buy_mode_radio", label_visibility="collapsed")
         
         if buy_mode == "Valor ($)":
@@ -147,11 +155,11 @@ def render_trading_tab(df, idx: int, current_price: float, current_time, selecte
                 amount_to_buy = buy_value / current_price 
                 trade = register_trade('BUY', current_price, amount_to_buy, current_time, selected_coin)
                 if trade:
-                    st.success(f"✅ Compra: {amount_to_buy:.4f}")
+                    st.success(f"Compra: {amount_to_buy:.4f}")
                     st.rerun()
     
     with trade_col2:
-        st.markdown("#### 🔴 Vender")
+        st.markdown("#### :material/remove_circle: Vender")
         sell_mode = st.radio("Modo", ["Qtd Moeda", "% Posição"], horizontal=True, key="sell_mode_radio", label_visibility="collapsed")
         
         if sell_mode == "Qtd Moeda":
@@ -165,11 +173,11 @@ def render_trading_tab(df, idx: int, current_price: float, current_time, selecte
             if sell_amount > 0:
                 trade = register_trade('SELL', current_price, sell_amount, current_time, selected_coin)
                 if trade:
-                    st.success(f"✅ Venda: {sell_amount:.4f}")
+                    st.success(f"Venda: {sell_amount:.4f}")
                     st.rerun()
     
     with trade_col3:
-        st.markdown("#### ℹ️ Status")
+        st.markdown("#### :material/info: Status")
         if st.session_state.holdings > 0:
             avg_price = st.session_state.avg_price
             unrealized_pct = ((current_price - avg_price) / avg_price) * 100
@@ -181,7 +189,7 @@ def render_trading_tab(df, idx: int, current_price: float, current_time, selecte
     st.divider()
     
     # --- TABELA DE TRADES (Integrada na tab Trading) ---
-    st.subheader("📋 Histórico de Operações")
+    st.subheader(":material/history: Histórico de Operações")
     
     if st.session_state.trades:
         trades_df = pd.DataFrame(st.session_state.trades)
@@ -196,17 +204,17 @@ def render_trading_tab(df, idx: int, current_price: float, current_time, selecte
             use_container_width=True,
             key="trade_editor",
             column_config={
-                "action": st.column_config.SelectboxColumn("🎯 Ação", options=["BUY", "SELL"], required=True),
-                "price": st.column_config.NumberColumn("💵 Preço Unit.", format="$%.2f"),
-                "amount": st.column_config.NumberColumn("📦 Qtd. Moedas", format="%.4f"),
-                "total_value": st.column_config.NumberColumn("💰 Valor Total", format="$%.2f", disabled=True),
-                "timestamp": st.column_config.DatetimeColumn("📅 Data/Hora", format="YYYY-MM-DD HH:mm"),
-                "reason": st.column_config.TextColumn("📝 Motivo/Label")
+                "action": st.column_config.SelectboxColumn("Ação", options=["BUY", "SELL"], required=True),
+                "price": st.column_config.NumberColumn("Preço Unit.", format="$%.2f"),
+                "amount": st.column_config.NumberColumn("Qtd. Moedas", format="%.4f"),
+                "total_value": st.column_config.NumberColumn("Valor Total", format="$%.2f", disabled=True),
+                "timestamp": st.column_config.DatetimeColumn("Data/Hora", format="YYYY-MM-DD HH:mm"),
+                "reason": st.column_config.TextColumn("Motivo/Label")
             },
             height=300
         )
         
-        if st.button("🗑️ Limpar Tabela (Reset)", use_container_width=True):
+        if st.button("Limpar Tabela (Reset)", use_container_width=True, icon=":material/delete:"):
             recalculate_portfolio([])
             st.rerun()
          

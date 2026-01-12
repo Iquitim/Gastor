@@ -18,9 +18,9 @@ def render_ml_studio_tab(df):
     
     # Abas internas para organização
     ml_tab_train, ml_tab_analysis, ml_tab_backtest = st.tabs([
-        "⚙️ Treino & Modelo", 
-        "🔍 Análise de Features", 
-        "🔮 Backtest & Validação"
+        ":material/settings: Treino & Modelo", 
+        ":material/search: Análise de Features", 
+        ":material/history: Backtest & Validação"
     ])
 
     # --- ABA 1: CONFIGURAÇÃO E TREINO ---
@@ -48,10 +48,10 @@ def render_ml_studio_tab(df):
             st.subheader("Treinamento")
             st.info("O modelo aprenderá com os trades marcados na aba Trading.")
             
-            if st.button("🚀 Iniciar Treinamento", type="primary", use_container_width=True):
+            if st.button("Iniciar Treinamento", type="primary", use_container_width=True, icon=":material/rocket_launch:"):
                 MIN_TRADES = 10
                 if len(st.session_state.trades) < MIN_TRADES:
-                    st.error(f"⚠️ Dados insuficientes! Marque pelo menos {MIN_TRADES} trades.")
+                    st.error(f"Dados insuficientes! Marque pelo menos {MIN_TRADES} trades.")
                 else:
                     with st.spinner(f"Treinando {model_name}..."):
                         try:
@@ -66,21 +66,21 @@ def render_ml_studio_tab(df):
                                 # Salva no diretório raiz do projeto
                                 model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'model_latest.joblib')
                                 model.save(model_path)
-                                st.toast("Modelo Treinado e Salvo!", icon="✅")
+                                st.toast("Modelo Treinado e Salvo!")
                         except Exception as e:
                             st.error(f"Erro no treino: {e}")
 
             if 'training_metrics' in st.session_state:
                 metrics = st.session_state.training_metrics
-                st.markdown("#### 🎯 Performance (Treino)")
+                st.markdown("#### :material/check_circle: Performance (Simulação In-Sample)")
                 m1, m2, m3 = st.columns(3)
-                m1.metric("Acurácia", f"{metrics.get('accuracy', 0):.2f}")
-                m2.metric("Precision", f"{metrics.get('precision', 0):.2f}")
-                m3.metric("Recall", f"{metrics.get('recall', 0):.2f}")
+                m1.metric("Win Rate", f"{metrics.get('win_rate', 0):.0f}%")
+                m2.metric("Profit Factor", f"{metrics.get('profit_factor', 0):.2f}")
+                m3.metric("Trades Sim.", f"{metrics.get('trades', 0)}")
     
     # --- ABA 2: ANÁLISE ---
     with ml_tab_analysis:
-        st.subheader("🔍 Correlação de Features")
+        st.subheader(":material/ssid_chart: Correlação de Features")
         st.caption("Entenda quais variáveis estão mais relacionadas entre si.")
         
         if st.button("Gerar Heatmap"):
@@ -105,7 +105,7 @@ def render_ml_studio_tab(df):
             
     # --- ABA 3: BACKTEST ---
     with ml_tab_backtest:
-        st.subheader("🔮 Validação Out-of-Time")
+        st.subheader(":material/model_training: Validação Out-of-Time")
         st.markdown("Simule o modelo em dados passados e futuros (OOT).")
         
         b_col1, b_col2 = st.columns([1, 2])

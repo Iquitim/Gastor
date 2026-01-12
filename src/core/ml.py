@@ -219,20 +219,89 @@ class TradeModel:
         self.model.fit(X_scaled, y_train)
         
         # Métricas (no próprio treino, pois dataset é pequeno demais pra split 70/30 robusto aqui)
-        preds = self.model.predict(X_scaled)
-        acc = accuracy_score(y_train, preds)
-        
-        # Calcula precision/recall média macro
-        report = classification_report(y_train, preds, output_dict=True, zero_division=0)
+        # Simulação Financeira Rápida (In-Sample)
+        # Mais valiosa para o usuário do que Acurácia "falsa"
+        sim_metrics = self._simulate_performance(df, self.predict(df))
         
         self.metrics = {
-            "accuracy": acc,
-            "precision": report['macro avg']['precision'],
-            "recall": report['macro avg']['recall'],
-            "support": len(y_train)
+            "accuracy": acc, # Mantém acurácia como secundária
+            "win_rate": sim_metrics['win_rate'],
+            "profit_factor": sim_metrics['profit_factor'],
+            "total_return": sim_metrics['total_return'],
+            "trades": sim_metrics['trades']
         }
         
         return self.metrics
+
+    def _simulate_performance(self, df: pd.DataFrame, preds: pd.Series) -> dict:
+        """Simula resultado financeiro dos sinais."""
+        balance = 1000.0
+        holdings = 0.0
+        entry_price = 0.0
+        
+        wins = 0
+        losses = 0
+        gross_profit = 0.0
+        gross_loss = 0.0
+        total_trades = 0
+        
+        in_position = False
+        
+        # Alinha índices
+        common_idx = df.index.intersection(preds.index)
+        df_sim = df.loc[common_idx]
+        preds_sim = preds.loc[common_idx]
+        
+        # Simula
+        for i in range(len(df_sim)):
+            price = df_sim['close'].iloc[i]
+            signal = preds_sim.iloc[i]
+            
+            if signal == 1 and not in_position: # BUY
+                amount = (balance * 0.99) / price
+                cost = amount * price
+                balance -= cost # Simplificado sem taxa pra rapidez ou usar padrão
+                holdings = amount
+                entry_price = price
+                in_position = True
+                
+            elif signal == -1 and in_position: # SELL
+                revenue = holdings * price
+                balance += revenue
+                
+                # Metrics
+                pnl = (price - entry_price) / entry_price
+                if pnl > 0:
+                    wins += 1
+                    gross_profit += (revenue - (entry_price * holdings))
+                else:
+                    losses += 1
+                    gross_loss += abs(revenue - (entry_price * holdings))
+                
+                holdings = 0.0
+                in_position = False
+                total_trades += 1
+                
+        # Fecha posição final se houver
+        if in_position:
+            final_price = df_sim['close'].iloc[-1]
+            balance += holdings * final_price
+            
+            pnl = (final_price - entry_price) / entry_price
+            if pnl > 0: wins += 1
+            else: losses += 1
+            total_trades += 1
+
+        win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
+        profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (99 if gross_profit > 0 else 0)
+        total_return = (balance - 1000.0) / 1000.0 * 100
+        
+        return {
+            "win_rate": win_rate,
+            "profit_factor": profit_factor,
+            "total_return": total_return,
+            "trades": total_trades
+        }
     
     def predict(self, df: pd.DataFrame) -> pd.Series:
         """
