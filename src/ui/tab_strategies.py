@@ -47,12 +47,25 @@ def render_strategies_tab(df):
         trade_value = initial_bal * position_size / 100
         st.metric(":material/attach_money: Valor por Trade", f"${trade_value:,.0f}")
     
-    force_close = st.checkbox(
-        ":material/push_pin: Forçar fechamento no fim do período",
-        value=True,
-        help="Se houver posição aberta no último candle, adiciona SELL automático",
-        key="force_close_checkbox"
-    )
+    # Opções de comportamento
+    opt_cols = st.columns(2)
+    
+    with opt_cols[0]:
+        force_close = st.checkbox(
+            ":material/push_pin: Forçar fechamento no fim do período",
+            value=True,
+            help="Se houver posição aberta no último candle, adiciona SELL automático",
+            key="force_close_checkbox"
+        )
+    
+    with opt_cols[1]:
+        # IMPORTANTE: Padrão é SUBSTITUIR para evitar acumulação incorreta
+        replace_trades = st.checkbox(
+            ":material/delete_sweep: Substituir trades existentes",
+            value=True,
+            help="Se marcado, os trades existentes serão substituídos. Desmarque para acumular.",
+            key="replace_trades_checkbox"
+        )
     
     st.markdown("---")
     
@@ -168,11 +181,22 @@ def render_strategies_tab(df):
                         last_timestamp=last_timestamp
                     )
                     
-                    current = st.session_state.trades
-                    combined = current + adjusted_trades
-                    recalculate_portfolio(combined)
+                    # CORREÇÃO: Verifica se deve substituir ou acumular trades
+                    replace_mode = st.session_state.get('replace_trades_checkbox', True)
                     
-                    st.success(f"Adicionados {len(adjusted_trades)} trades de {strategy.name}!")
+                    if replace_mode:
+                        # Substitui todos os trades existentes
+                        final_trades = adjusted_trades
+                        msg = f"Aplicados {len(adjusted_trades)} trades de {strategy.name}! (trades anteriores substituídos)"
+                    else:
+                        # Acumula com trades existentes
+                        current = st.session_state.trades
+                        final_trades = current + adjusted_trades
+                        msg = f"Adicionados {len(adjusted_trades)} trades de {strategy.name}! (total: {len(final_trades)})"
+                    
+                    recalculate_portfolio(final_trades)
+                    
+                    st.success(msg)
                     st.rerun()
     else:
         st.warning("Nenhuma estratégia disponível.")

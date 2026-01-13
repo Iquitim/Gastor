@@ -112,8 +112,9 @@ def render_sidebar():
         st.markdown("### Portfólio")
         current_price = 0
         if st.session_state.df is not None:
-            idx = st.session_state.get('selected_index', 0)
-            current_price = st.session_state.df['close'].iloc[idx]
+            # CORREÇÃO: Usa o último preço do período para cálculos de patrimônio
+            # O slider é apenas para navegação visual, não afeta o resultado real
+            current_price = st.session_state.df['close'].iloc[-1]
             
         portfolio_value = st.session_state.balance + (st.session_state.holdings * current_price)
         pnl_total = ((portfolio_value - st.session_state.initial_balance) / st.session_state.initial_balance) * 100

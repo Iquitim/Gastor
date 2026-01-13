@@ -221,25 +221,23 @@ def render_results_tab(df):
     # Calcula drawdown
     dd_metrics = calculate_drawdown(evolution_df)
     
-    # ==== USA OS MESMOS VALORES DA SIDEBAR (session_state) ====
-    # Isso garante consistência entre sidebar e dashboard
+    # ==== CÁLCULO CORRETO DO PATRIMÔNIO FINAL ====
+    # Usa o ÚLTIMO preço do período (não o slider de navegação)
     current_balance = st.session_state.get('balance', initial_balance)
     current_holdings = st.session_state.get('holdings', 0.0)
     
-    # Pega preço atual
-    idx = st.session_state.get('selected_index', len(df) - 1)
-    if idx >= len(df):
-        idx = len(df) - 1
-    current_price = df['close'].iloc[idx] if len(df) > 0 else 0
+    # CORREÇÃO: Usa o último preço do DataFrame, não o do slider
+    # O slider é para navegação visual, não para cálculo de resultados
+    last_price = df['close'].iloc[-1] if len(df) > 0 else 0
     
-    # Patrimônio Final = Saldo + (Holdings * Preço Atual)
-    final_value = current_balance + (current_holdings * current_price)
+    # Patrimônio Final = Saldo + (Holdings * Último Preço do Período)
+    final_value = current_balance + (current_holdings * last_price)
     total_pnl = final_value - initial_balance
     total_pnl_pct = (total_pnl / initial_balance * 100) if initial_balance > 0 else 0
     
     # Calcula métricas de trades (para estatísticas)
     metrics = calculate_metrics(trades, evolution_df, initial_balance)
-    # Sobrescreve com valores reais do session_state
+    # Sobrescreve com valores reais calculados
     metrics['final_value'] = final_value
     metrics['total_pnl'] = total_pnl
     metrics['total_pnl_pct'] = total_pnl_pct
