@@ -1,3 +1,5 @@
+![Gastor Logo](image/gastor.png)
+
 # 📊 Gastor - Trading Analysis & ML Platform
 
 > **Sistema híbrido de trading que combina intuição humana com Machine Learning**
