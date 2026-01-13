@@ -19,3 +19,6 @@ joblib>=1.3.0
 
 # === Configuração ===
 python-dotenv>=1.0.0
+
+# === Exchange APIs (Dados de Mercado) ===
+ccxt>=4.0.0

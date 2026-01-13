@@ -219,12 +219,16 @@ class TradeModel:
         self.model.fit(X_scaled, y_train)
         
         # Métricas (no próprio treino, pois dataset é pequeno demais pra split 70/30 robusto aqui)
+        # Calcula acurácia no treino
+        y_pred_train = self.model.predict(X_scaled)
+        acc = accuracy_score(y_train, y_pred_train)
+        
         # Simulação Financeira Rápida (In-Sample)
         # Mais valiosa para o usuário do que Acurácia "falsa"
         sim_metrics = self._simulate_performance(df, self.predict(df))
         
         self.metrics = {
-            "accuracy": acc, # Mantém acurácia como secundária
+            "accuracy": acc,  # Acurácia no treino (referência)
             "win_rate": sim_metrics['win_rate'],
             "profit_factor": sim_metrics['profit_factor'],
             "total_return": sim_metrics['total_return'],
