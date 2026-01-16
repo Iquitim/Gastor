@@ -101,7 +101,7 @@ def render_trading_tab(df, idx: int, current_price: float, current_time, selecte
         zoom = st.select_slider(
             "Zoom",
             options=[50, 100, 200, 400, 800, len(df)],
-            value=200,
+            value=100,
             key='zoom_slider'
         )
     
@@ -201,7 +201,7 @@ def render_trading_tab(df, idx: int, current_price: float, current_time, selecte
         edited_df = st.data_editor(
             edit_df,
             num_rows="dynamic",
-            use_container_width=True,
+            width="stretch",
             key="trade_editor",
             column_config={
                 "action": st.column_config.SelectboxColumn("Ação", options=["BUY", "SELL"], required=True),

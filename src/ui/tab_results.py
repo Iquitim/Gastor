@@ -215,6 +215,19 @@ def render_results_tab(df):
         st.info("Nenhum trade registrado. Execute estratégias ou marque trades manualmente para ver os resultados.")
         return
     
+    # Exibe período considerado (Trades)
+    timestamps = [pd.to_datetime(t['timestamp']) for t in trades]
+    if timestamps:
+        min_ts = min(timestamps)
+        max_ts = max(timestamps)
+        duration = max_ts - min_ts
+        
+        # Formatação amigável
+        p_start = min_ts.strftime('%d/%m/%Y %H:%M')
+        p_end = max_ts.strftime('%d/%m/%Y %H:%M')
+        
+        st.info(f"**Período dos Trades:** {p_start} até {p_end} • **Duração:** {duration.days} dias e {duration.components.hours}h")
+    
     # Calcula evolução do patrimônio (para gráfico)
     evolution_df = calculate_portfolio_evolution(trades, df, initial_balance)
     
