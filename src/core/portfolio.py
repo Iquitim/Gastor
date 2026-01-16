@@ -88,8 +88,13 @@ def adjust_trade_amounts(trades: list, initial_balance: float, position_size_pct
                 # Define base de cálculo do tamanho da posição
                 base_capital = running_balance if use_compound else initial_balance
                 
+                # Fator de tamanho do trade (Gestão de Risco)
+                # Default 1.0 (100%), pode vir da estratégia ou gestão de risco
+                size_factor = t.get('size_factor', 1.0)
+                
                 # Calcula valor alvo do trade
-                target_value = base_capital * (position_size_pct / 100.0)
+                # target = Capital * %Global * FatorDinâmico
+                target_value = base_capital * (position_size_pct / 100.0) * size_factor
                 
                 # PROTEÇÃO: Nunca investir mais do que o saldo disponível (sem alavancagem)
                 # Se não estiver usando juros compostos (fixo), mas perdeu dinheiro, 
@@ -123,13 +128,16 @@ def adjust_trade_amounts(trades: list, initial_balance: float, position_size_pct
             
         elif action == 'SELL':
             if holdings > 0:
-                amount = holdings # Vende tudo
+                # Suporte a venda parcial
+                size_factor = t.get('size_factor', 1.0)
+                amount = holdings * size_factor # Vende tudo ou parcial
+                
                 revenue = amount * price
                 fee = revenue * fee_rate
                 running_balance += (revenue - fee)
                 
                 t['amount'] = amount
-                holdings = 0
+                holdings -= amount # Subtrai o que vendeu
                 adjusted_trades.append(t)
     
     # Force close: se ainda tem posição aberta e force_close está ativo
