@@ -134,18 +134,20 @@ O **Gastor** foi desenhado com o **FTMO Challenge** em mente. O sistema verifica
 
 ---
 
-## 📱 As 4 Abas da Interface
+## 📱 As 5 Abas da Interface
 
 ```mermaid
 graph LR
     A["📈 Trading"] --> B["📊 Resultados"]
     B --> C["🧠 ML Studio"]
     C --> D["🧪 Estratégias"]
+    D --> E["⚙️ Otimizador"]
     
     style A fill:#10b981,stroke:#059669,color:#fff
     style B fill:#f59e0b,stroke:#d97706,color:#fff
     style C fill:#8b5cf6,stroke:#7c3aed,color:#fff
     style D fill:#3b82f6,stroke:#2563eb,color:#fff
+    style E fill:#ec4899,stroke:#db2777,color:#fff
 ```
 
 ---
@@ -222,6 +224,34 @@ Onde a mágica acontece! O ML aprende seus padrões:
 | 🚀 Breakout | Donchian, Volume |
 | 🎢 Outras | Stochastic RSI, Bollinger Bounce |
 
+**Funcionalidades Avançadas:**
+
+| Recurso | Descrição |
+|---------|----------|
+| **Juros Compostos** | Reinveste lucros automaticamente |
+| **Sizing por ATR** | Ajusta tamanho da posição pela volatilidade |
+| **Sizing por RSI** | Posições maiores em oversold extremo |
+| **Force Close** | Fecha posições abertas no fim do período |
+
+---
+
+### 5. ⚙️ Otimizador de Estratégias (NOVO!)
+
+Grid Search automático para encontrar os melhores parâmetros:
+
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| **Grid Search** | Testa todas as combinações de parâmetros |
+| **Otimização de Execução** | Testa Juros Compostos + Sizing Dinâmico |
+| **Ranking Automático** | Ordena por PnL, Win Rate ou Drawdown |
+| **Aplicar Campeã** | Um clique para usar a melhor configuração |
+
+**Métricas calculadas:**
+- Total PnL %
+- Win Rate %
+- Max Drawdown %
+- Total de Trades
+
 ---
 
 ## 🏗️ Arquitetura
@@ -232,30 +262,35 @@ gastor/
 ├── trades.json                 # Trades persistidos
 ├── requirements.txt            # Dependências
 │
-└── src/
-    ├── data_manager.py         # Ingestão de dados (CCXT/Binance)
-    │
-    ├── core/                   # Lógica de negócio
-    │   ├── config.py           # Taxas por moeda
-    │   ├── portfolio.py        # Gestão de portfólio
-    │   ├── indicators.py       # Indicadores técnicos
-    │   ├── charting.py         # Gráficos Plotly
-    │   ├── data_loader.py      # Carregamento de dados
-    │   └── ml.py               # Machine Learning
-    │
-    ├── ui/                     # Interface Streamlit
-    │   ├── sidebar.py          # Barra lateral
-    │   ├── tab_trading.py      # Aba Trading
-    │   ├── tab_results.py      # Aba Resultados + FTMO
-    │   ├── tab_ml_studio.py    # Aba ML
-    │   └── tab_strategies.py   # Aba Estratégias
-    │
-    └── strategies/             # 10 estratégias modulares
-        ├── base.py
-        ├── golden_cross.py
-        ├── rsi_reversal.py
-        ├── macd_crossover.py
-        └── ...
+├── src/
+│   ├── data_manager.py         # Ingestão de dados (CCXT/Binance)
+│   │
+│   ├── core/                   # Lógica de negócio
+│   │   ├── config.py           # Taxas por moeda (slippage dinâmico)
+│   │   ├── portfolio.py        # Gestão de portfólio + Risk Management
+│   │   ├── indicators.py       # Indicadores técnicos
+│   │   ├── charting.py         # Gráficos Plotly
+│   │   ├── data_loader.py      # Carregamento de dados
+│   │   └── ml.py               # Machine Learning
+│   │
+│   ├── ui/                     # Interface Streamlit
+│   │   ├── sidebar.py          # Barra lateral
+│   │   ├── tab_trading.py      # Aba Trading
+│   │   ├── tab_results.py      # Aba Resultados + FTMO
+│   │   ├── tab_ml_studio.py    # Aba ML
+│   │   ├── tab_strategies.py   # Aba Estratégias
+│   │   └── tab_optimizer.py    # Aba Otimizador (NOVO!)
+│   │
+│   └── strategies/             # 10 estratégias modulares
+│       ├── base.py
+│       ├── golden_cross.py
+│       ├── rsi_reversal.py
+│       ├── macd_crossover.py
+│       └── ...
+│
+└── tests/                      # Testes de Estresse
+    └── stress/
+        └── test_rsi_reversal.py  # Valida estratégias em múltiplos períodos
 ```
 
 ---
@@ -287,6 +322,34 @@ class MinhaStrategy(BaseStrategy):
         trades = []
         # Sua lógica aqui
         return trades
+```
+
+---
+
+## 🔥 Stress Testing
+
+Valide suas estratégias em múltiplos períodos antes de arriscar dinheiro real:
+
+```bash
+# Da raiz do projeto
+source venv/bin/activate
+python tests/stress/test_rsi_reversal.py
+```
+
+**O que o teste faz:**
+1. Roda a estratégia em 4 períodos (90, 120, 180, 365 dias)
+2. Calcula métricas de cada período
+3. Avalia se passaria no FTMO Challenge
+4. Gera recomendação automática
+
+**Exemplo de saída:**
+```
+Período                   PnL %   Win Rate     Max DD   Trades
+------------------------------------------------------------
+90 dias (curto)         +10.36%      70.6%     -9.27%       17
+120 dias (médio)        +17.36%      66.7%     -9.27%       27
+180 dias (longo)         +7.17%      62.9%    -16.17%       35
+365 dias (1 ano)        -21.98%      61.3%    -40.70%       62
 ```
 
 ---
