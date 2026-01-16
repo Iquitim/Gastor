@@ -66,6 +66,14 @@ def render_strategies_tab(df):
             help="Se marcado, os trades existentes serão substituídos. Desmarque para acumular.",
             key="replace_trades_checkbox"
         )
+        
+        # Novo: Juros Compostos
+        use_compound = st.checkbox(
+            ":material/savings: Reinvestir Lucros (Juros Compostos)",
+            value=False,
+            help="Se marcado, usa o saldo acumulado para calcular o tamanho da próxima posição (não o inicial).",
+            key="use_compound_checkbox"
+        )
     
     st.markdown("---")
     
@@ -178,7 +186,8 @@ def render_strategies_tab(df):
                         position_pct,
                         force_close=force_close,
                         last_price=last_price,
-                        last_timestamp=last_timestamp
+                        last_timestamp=last_timestamp,
+                        use_compound=use_compound
                     )
                     
                     # CORREÇÃO: Verifica se deve substituir ou acumular trades

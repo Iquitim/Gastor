@@ -46,44 +46,89 @@ def sanitize_trades(trades: list) -> list:
 
 
 def adjust_trade_amounts(trades: list, initial_balance: float, position_size_pct: float = 100.0, 
-                         force_close: bool = False, last_price: float = None, last_timestamp = None) -> list:
+                         force_close: bool = False, last_price: float = None, last_timestamp = None,
+                         use_compound: bool = False) -> list:
     """
-    Ajusta os amounts dos trades para usar porcentagem do SALDO INICIAL.
-    
-    O valor por operação é FIXO baseado no saldo inicial, não no saldo flutuante.
-    Isso permite múltiplas operações com tamanho consistente.
+    Ajusta os amounts dos trades.
     
     Args:
         trades: Lista de trades com amounts placeholders
         initial_balance: Saldo inicial da conta
-        position_size_pct: Porcentagem do SALDO INICIAL por operação (padrão 100%)
+        position_size_pct: Porcentagem do saldo por operação
         force_close: Se True, adiciona SELL no final se houver posição aberta
-        last_price: Preço do último candle (para force_close)
-        last_timestamp: Timestamp do último candle (para force_close)
+        last_price: Preço do último candle
+        last_timestamp: Timestamp do último candle
+        use_compound: Se True, usa saldo CORRENTE (juros compostos). 
+                      Se False, usa saldo INICIAL fixo.
     
     Returns:
         Lista de trades com amounts ajustados
     """
+    from .config import get_total_fee, COMMISSION
+    
     if not trades:
         return []
         
     adjusted_trades = []
+    
+    # Estado para simulação de saldo corrente
+    running_balance = initial_balance
     holdings = 0.0
-    position_value = initial_balance * (position_size_pct / 100.0)
+    
+    # Assume taxa padrão para estimativa (pode variar por moeda mas aqui simplificamos)
+    # Idealmente pegaria da moeda do trade, mas assumiremos SOL/USDT ou a do primeiro trade
+    fee_rate = COMMISSION 
     
     for t in trades:
         action = t.get('action', '').upper()
         price = float(t.get('price', 0))
         
         if action == 'BUY':
-            amount = position_value / price if price > 0 else 0
-            t['amount'] = amount
-            holdings += amount
-            adjusted_trades.append(t)
+            if holdings == 0: # Só compra se não tiver posição (logica simplificada de portfolio unico)
+                # Define base de cálculo do tamanho da posição
+                base_capital = running_balance if use_compound else initial_balance
+                
+                # Calcula valor alvo do trade
+                target_value = base_capital * (position_size_pct / 100.0)
+                
+                # PROTEÇÃO: Nunca investir mais do que o saldo disponível (sem alavancagem)
+                # Se não estiver usando juros compostos (fixo), mas perdeu dinheiro, 
+                # limita ao que sobrou na conta.
+                position_value = min(target_value, running_balance)
+                
+                # Se saldo for insuficiente (<= 0), não opera
+                if position_value <= 0:
+                    position_value = 0
+                
+                # Ajusta amount
+                amount = position_value / price if price > 0 else 0
+                
+                # Registra o custo (estimado para controle de fluxo)
+                cost = amount * price
+                fee = cost * fee_rate
+                
+                # Pequeno ajuste se a taxa faria o saldo ficar negativo (corner case)
+                if (cost + fee) > running_balance:
+                    # Reduz amount para cobrir a taxa
+                    amount = running_balance / (price * (1 + fee_rate))
+                    cost = amount * price
+                    fee = cost * fee_rate
+                
+                running_balance -= (cost + fee)
+                
+                t['amount'] = amount
+                holdings += amount
+                if amount > 0:
+                    adjusted_trades.append(t)
             
         elif action == 'SELL':
             if holdings > 0:
-                t['amount'] = holdings
+                amount = holdings # Vende tudo
+                revenue = amount * price
+                fee = revenue * fee_rate
+                running_balance += (revenue - fee)
+                
+                t['amount'] = amount
                 holdings = 0
                 adjusted_trades.append(t)
     
@@ -98,6 +143,10 @@ def adjust_trade_amounts(trades: list, initial_balance: float, position_size_pct
             'coin': 'AUTO'
         }
         adjusted_trades.append(close_trade)
+        # Atualiza saldo final (opcional aqui, mas bom para debug)
+        revenue = holdings * last_price
+        fee = revenue * fee_rate
+        running_balance += (revenue - fee)
         holdings = 0
     
     return adjusted_trades
