@@ -75,9 +75,9 @@ def adjust_trade_amounts(trades: list, initial_balance: float, position_size_pct
     running_balance = initial_balance
     holdings = 0.0
     
-    # Assume taxa padrão para estimativa (pode variar por moeda mas aqui simplificamos)
-    # Idealmente pegaria da moeda do trade, mas assumiremos SOL/USDT ou a do primeiro trade
-    fee_rate = COMMISSION 
+    # Usa taxa total (exchange + slippage) baseada na moeda selecionada
+    coin = st.session_state.get('sb_coin', 'SOL/USDT')
+    fee_rate = get_total_fee(coin) 
     
     for t in trades:
         action = t.get('action', '').upper()
@@ -128,16 +128,16 @@ def adjust_trade_amounts(trades: list, initial_balance: float, position_size_pct
             
         elif action == 'SELL':
             if holdings > 0:
-                # Suporte a venda parcial
-                size_factor = t.get('size_factor', 1.0)
-                amount = holdings * size_factor # Vende tudo ou parcial
+                # Vende TUDO (uma compra = uma venda)
+                # O size_factor já foi aplicado na COMPRA para controlar tamanho
+                amount = holdings  # Vende 100% da posição
                 
                 revenue = amount * price
                 fee = revenue * fee_rate
                 running_balance += (revenue - fee)
                 
                 t['amount'] = amount
-                holdings -= amount # Subtrai o que vendeu
+                holdings = 0  # Zera posição
                 adjusted_trades.append(t)
     
     # Force close: se ainda tem posição aberta e force_close está ativo
@@ -264,3 +264,78 @@ def get_portfolio_at(trades: list, target_timestamp) -> dict:
         'holdings': holdings,
         'avg_price': avg_price
     }
+
+
+def apply_risk_management(trades: list, df: pd.DataFrame, method: str) -> list:
+    """
+    Aplica lógica de Sizing (Gestão de Risco) aos trades.
+    Adiciona 'size_factor' e 'reason' ao dicionário do trade.
+    
+    Args:
+        trades: Lista de trades crus (Action, Price, Timestamp)
+        df: DataFrame com indicadores (necessário para ATR/RSI)
+        method: Metodo de Sizing ('fixo', 'conservador', 'volatilidade_atr', 'agressivo_rsi')
+        
+    Returns:
+        Lista de trades enriquecida com size_factor
+    """
+    if not trades or method == 'fixo':
+        return trades
+        
+    processed_trades = []
+    
+    # Pré-cálculos de indicadores se necessário
+    atr_pct = None
+    rsi_series = None
+    
+    if method == "volatilidade_atr" and 'close' in df.columns:
+        # Calcula ATR Simplificado (%) se não tiver
+        high = df['high'] if 'high' in df.columns else df['close'] * 1.01
+        low = df['low'] if 'low' in df.columns else df['close'] * 0.99
+        high_low = (high - low) / df['close']
+        atr_pct = high_low.rolling(14).mean().fillna(0.02) # Default 2%
+        
+    if method == "agressivo_rsi" and 'rsi' in df.columns:
+        rsi_series = df['rsi']
+        
+    for t in trades:
+        ts = t['timestamp']
+        factor = 1.0 # Default
+        
+        if method == "conservador":
+            factor = 0.5
+            
+        elif method == "volatilidade_atr":
+            try:
+                # Busca Volatilidade na data do trade
+                current_atr = atr_pct.loc[ts] if (atr_pct is not None and ts in atr_pct.index) else 0.02
+                
+                if current_atr > 0.04: factor = 0.3      # Caos
+                elif current_atr > 0.025: factor = 0.6   # Agitado
+                elif current_atr < 0.01: factor = 1.0    # Calmo (Full)
+                else: factor = 0.8                       # Normal
+                    
+                t['reason'] = t.get('reason', '') + f" | Volat.: {current_atr:.2%} (x{factor})"
+            except:
+                factor = 1.0
+
+        elif method == "agressivo_rsi":
+            try:
+                val_rsi = rsi_series.loc[ts] if (rsi_series is not None and ts in rsi_series.index) else 50
+                action = t['action']
+                
+                if action == 'BUY':
+                    if val_rsi < 25: factor = 1.0    # Oversold extremo -> Full
+                    elif val_rsi < 35: factor = 0.6  # Médio
+                    else: factor = 0.3               # Fraco
+                elif action == 'SELL':
+                    factor = 1.0 # Venda full
+                    
+                t['reason'] = t.get('reason', '') + f" | RSI: {val_rsi:.1f} (x{factor})"
+            except:
+                factor = 1.0
+                
+        t['size_factor'] = factor
+        processed_trades.append(t)
+        
+    return processed_trades
