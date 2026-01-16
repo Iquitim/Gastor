@@ -46,6 +46,32 @@ def render_strategies_tab(df):
         initial_bal = st.session_state.get('initial_balance', 10000.0)
         trade_value = initial_bal * position_size / 100
         st.metric(":material/attach_money: Valor por Trade", f"${trade_value:,.0f}")
+        
+    # === GESTÃO DE RISCO E SIZING ===
+    with st.expander("🛡️ Gestão de Risco & Sizing", expanded=True):
+        risk_cols = st.columns([2, 2])
+        with risk_cols[0]:
+            sizing_method = st.selectbox(
+                "Modo de Tamanho da Posição (Sizing)",
+                ["fixo", "conservador", "volatilidade_atr", "agressivo_rsi"],
+                format_func=lambda x: {
+                    "fixo": "Fixo (100% da Posição)",
+                    "conservador": "Conservador (50% da Posição)",
+                    "volatilidade_atr": "Dinâmico (Ajustado pela Volatilidade - ATR)",
+                    "agressivo_rsi": "Escalonado (Agressivo em RSI Extremo)"
+                }.get(x, x),
+                help="Define quanto do capital disponível será usado em cada trade."
+            )
+        
+        with risk_cols[1]:
+            if sizing_method == "fixo":
+                st.info("Usa sempre o tamanho total definido (100%).")
+            elif sizing_method == "conservador":
+                st.info("Usa sempre metade do tamanho definido (50%).")
+            elif sizing_method == "volatilidade_atr":
+                st.info("Reduz a mão quando o mercado está agitado (ATR alto). Aumenta quando está calmo.")
+            elif sizing_method == "agressivo_rsi":
+                st.info("Entra leve (30%) em sinais fracos e pesado (100%) em sinais fortes (RSI < 20/ > 80).")
     
     # Opções de comportamento
     opt_cols = st.columns(2)
@@ -173,6 +199,67 @@ def render_strategies_tab(df):
                 
                 if st.button(f"Aplicar {strategy.name}", use_container_width=True, key=f"btn_{slug}", icon=":material/rocket_launch:"):
                     raw_trades = strategy.apply(strategy_df, **params)
+                    
+                    # === APLICAÇÃO DA LÓGICA DE SIZING ===
+                    # Ajusta 'size_factor' baseado na realidade (Indicadores)
+                    
+                    # Pré-cálculo de indicadores se necessário
+                    if sizing_method in ["volatilidade_atr"] and 'close' in strategy_df.columns:
+                        # Calcula ATR Simplificado (%) se não tiver
+                        high = strategy_df['high'] if 'high' in strategy_df.columns else strategy_df['close'] * 1.01
+                        low = strategy_df['low'] if 'low' in strategy_df.columns else strategy_df['close'] * 0.99
+                        high_low = (high - low) / strategy_df['close']
+                        atr_pct = high_low.rolling(14).mean().fillna(0.02) # Default 2%
+                    
+                    if sizing_method in ["agressivo_rsi"] and 'rsi' in strategy_df.columns:
+                        rsi_series = strategy_df['rsi']
+                    
+                    processed_trades = []
+                    for t in raw_trades:
+                        ts = t['timestamp']
+                        
+                        # Default factor
+                        factor = 1.0
+                        
+                        if sizing_method == "conservador":
+                            factor = 0.5
+                            
+                        elif sizing_method == "volatilidade_atr":
+                            try:
+                                # Busca Volatilidade na data do trade
+                                # Se > 3%, reduz mão. Se < 1%, mão cheia.
+                                current_atr = atr_pct.loc[ts] if ts in atr_pct.index else 0.02
+                                # Escalonamento linear inverso ou patamares
+                                if current_atr > 0.04: factor = 0.3      # Caos
+                                elif current_atr > 0.025: factor = 0.6   # Agitado
+                                elif current_atr < 0.01: factor = 1.0    # Calmo (Full)
+                                else: factor = 0.8                       # Normal
+                                    
+                                t['reason'] += f" | Volat.: {current_atr:.2%} (x{factor})"
+                            except:
+                                factor = 1.0
+
+                        elif sizing_method == "agressivo_rsi":
+                            try:
+                                # Compra: RSI baixo é forte. Venda: RSI alto é forte.
+                                val_rsi = rsi_series.loc[ts] if ts in rsi_series.index else 50
+                                action = t['action']
+                                
+                                if action == 'BUY':
+                                    if val_rsi < 25: factor = 1.0    # Oversold extremo -> Full
+                                    elif val_rsi < 35: factor = 0.6  # Médio
+                                    else: factor = 0.3               # Fraco
+                                elif action == 'SELL':
+                                    factor = 1.0 # Venda full
+                                    
+                                t['reason'] += f" | RSI: {val_rsi:.1f} (x{factor})"
+                            except:
+                                factor = 1.0
+                                
+                        t['size_factor'] = factor
+                        processed_trades.append(t)
+                        
+                    raw_trades = processed_trades
                     
                     initial_balance = st.session_state.get('initial_balance', 10000.0)
                     position_pct = st.session_state.get('strategy_position_size', 100)
