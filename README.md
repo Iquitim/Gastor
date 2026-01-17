@@ -1,3 +1,14 @@
+---
+title: Gastor
+emoji: 📊
+colorFrom: green
+colorTo: purple
+sdk: docker
+app_file: app.py
+pinned: false
+license: mit
+---
+
 ![Gastor Logo](image/gastor.png)
 
 # 📊 Gastor - Trading Analysis & ML Platform
