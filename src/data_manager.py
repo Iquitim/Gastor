@@ -18,6 +18,12 @@ import pandas as pd
 import numpy as np
 from dotenv import load_dotenv
 
+try:
+    import streamlit as st
+    HAS_STREAMLIT = True
+except ImportError:
+    HAS_STREAMLIT = False
+
 load_dotenv()
 
 
@@ -163,105 +169,137 @@ class DataManager:
     ) -> pd.DataFrame:
         """
         Obtém dados históricos via CCXT com paginação automática.
+        Tenta exchanges alternativas se a primária falhar.
         """
+        # Lista de exchanges para tentar (em ordem de preferência)
+        exchanges_to_try = [exchange_id, 'binanceus', 'kraken', 'kucoin', 'okx']
+        
         try:
             import ccxt
-            
-            # Cria instância da exchange
-            exchange_class = getattr(ccxt, exchange_id)
-            exchange = exchange_class({
-                'enableRateLimit': True,  # Respeita rate limits
-            })
-            
-            # Converte timeframe
-            tf_mapping = {
-                '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
-                '1h': '1h', '4h': '4h', '1d': '1d', '1w': '1w',
-                'M1': '1m', 'M5': '5m', 'M15': '15m', 'M30': '30m',
-                'H1': '1h', 'H4': '4h', 'D1': '1d',
-            }
-            tf = tf_mapping.get(timeframe, '1h')
-            
-            # Calcula timestamps
-            now = datetime.now()
-            since = int((now - timedelta(days=days)).timestamp() * 1000)
-            
-            # Paginação automática
-            all_ohlcv = []
-            limit_per_request = 1000  # CCXT padrão
-            
-            print(f"[CCXT] Baixando {symbol} ({tf}) - últimos {days} dias de {exchange_id}...")
-            
-            while True:
-                ohlcv = exchange.fetch_ohlcv(
-                    symbol=symbol,
-                    timeframe=tf,
-                    since=since,
-                    limit=limit_per_request
-                )
-                
-                if not ohlcv:
-                    break
-                
-                all_ohlcv.extend(ohlcv)
-                
-                # Próxima página
-                last_timestamp = ohlcv[-1][0]
-                since = last_timestamp + 1
-                
-                # Para se chegou ao presente
-                if last_timestamp >= int(now.timestamp() * 1000):
-                    break
-                
-                # Rate limit
-                time.sleep(exchange.rateLimit / 1000)
-            
-            if not all_ohlcv:
-                print(f"[CCXT] Nenhum dado retornado")
-                return self._generate_simulated_data(symbol.replace("/", ""), days * 24)
-            
-            # Converte para DataFrame
-            df = pd.DataFrame(all_ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-            df = df.set_index('timestamp')
-            df = df.astype(float)
-            
-            # Remove duplicatas
-            df = df[~df.index.duplicated(keep='last')]
-            df = df.sort_index()
-            
-            print(f"[CCXT] ✅ Obtidos {len(df)} candles ({df.index[0].date()} a {df.index[-1].date()})")
-            return df
-            
         except ImportError:
-            print("[CCXT] ⚠️ ccxt não instalado. Instale com: pip install ccxt")
-            print("[CCXT] Usando fallback Binance API com paginação manual...")
-            # Calculate limit based on timeframe (approx hours)
-            limit_needed = days * 24 
-            if timeframe == '1d': limit_needed = days
-            elif timeframe == '15m': limit_needed = days * 24 * 4
-            
-            return self.get_historical_data(symbol.replace("/", ""), timeframe, limit=limit_needed)
-        except Exception as e:
-            print(f"[CCXT] Erro: {e}")
-            print("[CCXT] Usando fallback Binance API com paginação manual...")
-            limit_needed = days * 24 
-            return self.get_historical_data(symbol.replace("/", ""), timeframe, limit=limit_needed)
+            print("[CCXT] ⚠️ ccxt não instalado!")
+            return self._generate_simulated_data(symbol.replace("/", ""), days * 24)
+        
+        # Converte timeframe
+        tf_mapping = {
+            '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
+            '1h': '1h', '4h': '4h', '1d': '1d', '1w': '1w',
+            'M1': '1m', 'M5': '5m', 'M15': '15m', 'M30': '30m',
+            'H1': '1h', 'H4': '4h', 'D1': '1d',
+        }
+        tf = tf_mapping.get(timeframe, '1h')
+        
+        last_error = None
+        
+        for ex_id in exchanges_to_try:
+            try:
+                print(f"[CCXT] Tentando {ex_id} para {symbol}...")
+                
+                # Cria instância da exchange
+                exchange_class = getattr(ccxt, ex_id, None)
+                if not exchange_class:
+                    continue
+                    
+                exchange = exchange_class({
+                    'enableRateLimit': True,
+                    'timeout': 30000,  # 30 segundos timeout
+                })
+                
+                # Calcula timestamps
+                now = datetime.now()
+                since = int((now - timedelta(days=days)).timestamp() * 1000)
+                
+                # Paginação automática
+                all_ohlcv = []
+                limit_per_request = 1000
+                
+                print(f"[CCXT] Baixando {symbol} ({tf}) - últimos {days} dias de {ex_id}...")
+                
+                while True:
+                    ohlcv = exchange.fetch_ohlcv(
+                        symbol=symbol,
+                        timeframe=tf,
+                        since=since,
+                        limit=limit_per_request
+                    )
+                    
+                    if not ohlcv:
+                        break
+                    
+                    all_ohlcv.extend(ohlcv)
+                    
+                    # Próxima página
+                    last_timestamp = ohlcv[-1][0]
+                    since = last_timestamp + 1
+                    
+                    # Para se chegou ao presente
+                    if last_timestamp >= int(now.timestamp() * 1000):
+                        break
+                    
+                    # Rate limit
+                    time.sleep(exchange.rateLimit / 1000)
+                
+                if not all_ohlcv:
+                    print(f"[CCXT] Nenhum dado retornado de {ex_id}")
+                    continue
+                
+                # Converte para DataFrame
+                df = pd.DataFrame(all_ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+                df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+                df = df.set_index('timestamp')
+                df = df.astype(float)
+                
+                # Remove duplicatas
+                df = df[~df.index.duplicated(keep='last')]
+                df = df.sort_index()
+                
+                print(f"[CCXT] ✅ Obtidos {len(df)} candles de {ex_id} ({df.index[0].date()} a {df.index[-1].date()})")
+                
+                # Reseta flag de dados simulados
+                if HAS_STREAMLIT:
+                    try:
+                        st.session_state.using_simulated_data = False
+                    except:
+                        pass
+                
+                return df
+                
+            except Exception as e:
+                last_error = e
+                print(f"[CCXT] ❌ Erro com {ex_id}: {type(e).__name__}: {e}")
+                continue
+        
+        # Todas as exchanges falharam
+        print(f"[CCXT] ⚠️ Todas as exchanges falharam. Último erro: {last_error}")
+        return self._generate_simulated_data(symbol.replace("/", ""), days * 24)
     
     def _generate_simulated_data(self, symbol: str, bars: int = 1000) -> pd.DataFrame:
         """
         Gera dados simulados para desenvolvimento/backtesting.
         
         Útil quando não há conexão com API.
+        ATENÇÃO: Seta flag 'using_simulated_data' no session_state.
         """
-        print(f"[DataManager] Gerando {bars} barras simuladas para {symbol}")
+        print(f"[DataManager] ⚠️ USANDO DADOS SIMULADOS para {symbol} ({bars} barras)")
+        
+        # Seta flag no Streamlit para UI mostrar aviso
+        if HAS_STREAMLIT:
+            try:
+                st.session_state.using_simulated_data = True
+                st.session_state.simulated_data_reason = "API de dados indisponível"
+            except:
+                pass  # Fora do contexto do Streamlit
         
         # Preço base por símbolo
         base_prices = {
             "BTCUSD": 45000.0,
             "BTCUSDT": 45000.0,
+            "BTC/USDT": 45000.0,
             "ETHUSD": 2500.0,
             "ETHUSDT": 2500.0,
+            "ETH/USDT": 2500.0,
+            "SOL/USDT": 150.0,
+            "SOLUSDT": 150.0,
         }
         base_price = base_prices.get(symbol.upper(), 100.0)
         

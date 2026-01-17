@@ -101,11 +101,23 @@ def render_sidebar():
         days = st.slider("Dias de histórico", 30, 180, 90)
         
         if st.button("Carregar Dados", type="primary"):
+            # Reset flag before loading
+            st.session_state.using_simulated_data = False
+            
             with st.spinner("Carregando..."):
                 df = load_data(st.session_state.sb_coin_widget, days)
                 st.session_state.df = df
                 st.session_state.selected_index = len(df) - 1
-                st.success(f"✅ {len(df)} candles carregados")
+                
+                # Check if using simulated data
+                if st.session_state.get('using_simulated_data', False):
+                    st.warning(f"⚠️ Usando dados SIMULADOS! API indisponível.")
+                else:
+                    st.success(f"✅ {len(df)} candles carregados")
+        
+        # Show persistent warning if using simulated data
+        if st.session_state.get('using_simulated_data', False):
+            st.error("🔴 DADOS SIMULADOS - Não são dados reais de mercado!")
         
         st.divider()
         
