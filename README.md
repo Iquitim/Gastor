@@ -124,6 +124,22 @@ Acesse em `http://localhost:8501`
 
 ---
 
+## 📡 Fontes de Dados
+
+O Gastor suporta múltiplas fontes de dados. Escolha na sidebar qual utilizar:
+
+| Fonte | Ícone | Descrição | Limitações |
+|-------|-------|-----------|------------|
+| **Automático** | 🔄 | Tenta todas as fontes até uma funcionar | - |
+| **CCXT (Binance)** | 🟡 | Exchange Binance via CCXT - Melhor qualidade | Bloqueado em algumas regiões |
+| **CCXT (BinanceUS)** | 🇺🇸 | Exchange BinanceUS - Funciona em mais regiões | Menos pares disponíveis |
+| **CoinGecko** | 🦎 | Agregador gratuito sem restrições geográficas | 30 calls/min, dados menos granulares |
+| **CryptoCompare** | 📊 | API gratuita robusta | 100k calls/mês |
+
+> 💡 **Dica:** Use **Automático** para que o sistema escolha a melhor fonte disponível. Se estiver em uma região com restrições (como Hugging Face Spaces), o sistema automaticamente usa BinanceUS ou CoinGecko.
+
+---
+
 ## 🌍 O Desafio das Prop Firms (FTMO)
 
 ### O que são Prop Firms?
@@ -282,6 +298,7 @@ gastor/
 │   │   ├── indicators.py       # Indicadores técnicos
 │   │   ├── charting.py         # Gráficos Plotly
 │   │   ├── data_loader.py      # Carregamento de dados
+│   │   ├── data_fetchers.py    # APIs: CoinGecko, CryptoCompare (NOVO!)
 │   │   └── ml.py               # Machine Learning
 │   │
 │   ├── ui/                     # Interface Streamlit
