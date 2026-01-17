@@ -100,24 +100,63 @@ def render_sidebar():
         )
         days = st.slider("Dias de histórico", 30, 180, 90)
         
+        # Data source selector
+        from src.core.data_fetchers import AVAILABLE_DATA_SOURCES
+        
+        source_options = list(AVAILABLE_DATA_SOURCES.keys())
+        source_labels = [f"{AVAILABLE_DATA_SOURCES[k]['icon']} {AVAILABLE_DATA_SOURCES[k]['name']}" for k in source_options]
+        
+        if 'data_source' not in st.session_state:
+            st.session_state.data_source = "auto"
+        
+        selected_source_idx = source_options.index(st.session_state.data_source) if st.session_state.data_source in source_options else 0
+        
+        selected_source = st.selectbox(
+            "Fonte de Dados",
+            options=source_options,
+            format_func=lambda x: f"{AVAILABLE_DATA_SOURCES[x]['icon']} {AVAILABLE_DATA_SOURCES[x]['name']}",
+            index=selected_source_idx,
+            key='data_source_widget',
+            help="Escolha a fonte de dados. 'Automático' tenta todas até uma funcionar."
+        )
+        st.session_state.data_source = selected_source
+        
+        # Show source description
+        st.caption(f"ℹ️ {AVAILABLE_DATA_SOURCES[selected_source]['description']}")
+        
         if st.button("Carregar Dados", type="primary"):
-            # Reset flag before loading
+            # Reset flags before loading
             st.session_state.using_simulated_data = False
+            st.session_state.data_source_used = None
+            st.session_state.data_source_error = None
             
-            with st.spinner("Carregando..."):
-                df = load_data(st.session_state.sb_coin_widget, days)
+            with st.spinner(f"Carregando de {AVAILABLE_DATA_SOURCES[selected_source]['name']}..."):
+                df = load_data(st.session_state.sb_coin_widget, days, selected_source)
                 st.session_state.df = df
                 st.session_state.selected_index = len(df) - 1
                 
-                # Check if using simulated data
+                # Show result
+                source_used = st.session_state.get('data_source_used', 'unknown')
+                error = st.session_state.get('data_source_error')
+                
                 if st.session_state.get('using_simulated_data', False):
                     st.warning(f"⚠️ Usando dados SIMULADOS! API indisponível.")
+                    if error:
+                        st.error(f"❌ {error}")
+                elif source_used and source_used in AVAILABLE_DATA_SOURCES:
+                    src_info = AVAILABLE_DATA_SOURCES[source_used]
+                    st.success(f"✅ {len(df)} candles via {src_info['icon']} {src_info['name']}")
                 else:
                     st.success(f"✅ {len(df)} candles carregados")
         
-        # Show persistent warning if using simulated data
+        # Show persistent warnings/info
         if st.session_state.get('using_simulated_data', False):
             st.error("🔴 DADOS SIMULADOS - Não são dados reais de mercado!")
+        elif st.session_state.get('data_source_used'):
+            source_used = st.session_state.data_source_used
+            if source_used in AVAILABLE_DATA_SOURCES:
+                src_info = AVAILABLE_DATA_SOURCES[source_used]
+                st.info(f"📡 Fonte: {src_info['icon']} {src_info['name']}")
         
         st.divider()
         
