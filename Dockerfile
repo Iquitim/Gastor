@@ -28,11 +28,8 @@ COPY src/ ./src/
 COPY assets/ ./assets/
 COPY image/ ./image/
 
-# Copy pre-trained model (if exists)
-COPY model_latest.joblib ./model_latest.joblib
-
-# Copy trades data (optional, for demo)
-COPY trades.json ./trades.json
+# Note: model_latest.joblib and trades.json are user-generated
+# They will be created when user trains a model in the app
 
 # Expose Streamlit default port (required by HF Spaces)
 EXPOSE 7860
