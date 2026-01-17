@@ -27,6 +27,7 @@ COPY app.py .
 COPY src/ ./src/
 COPY assets/ ./assets/
 COPY image/ ./image/
+COPY .streamlit/ ./.streamlit/
 
 # Note: model_latest.joblib and trades.json are user-generated
 # They will be created when user trains a model in the app
