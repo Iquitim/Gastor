@@ -251,6 +251,29 @@ Onde a mágica acontece! O ML aprende seus padrões:
 | 🚀 Breakout | Donchian, Volume |
 | 🎢 Outras | Stochastic RSI, Bollinger Bounce |
 
+---
+
+#### 🏆 Estratégia em Destaque: RSI Reversal
+
+> **Campeã do Otimizador** - Melhor performance validada em 90 dias de dados
+
+![RSI Reversal Champion](image/rsi_reversal_champion.png)
+
+| Métrica | Resultado |
+|---------|-----------|
+| **Lucro Total** | +10.36% ✅ |
+| **Win Rate** | 70.6% |
+| **Max Drawdown** | 9.27% ✅ |
+| **Trades** | 17 |
+
+**Configuração Campeã:**
+- `rsi_buy=20, rsi_sell=60`
+- Modo: Juros Compostos + Volatilidade ATR
+
+> 💡 Esta configuração passou no **FTMO Challenge**: atingiu a meta de +10% com drawdown abaixo de 10%.
+
+---
+
 **Funcionalidades Avançadas:**
 
 | Recurso | Descrição |
