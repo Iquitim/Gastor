@@ -304,7 +304,22 @@ Grid Search automático para encontrar os melhores parâmetros:
 
 ---
 
-## 🏗️ Arquitetura
+### 6. 📖 Glossário Interativo (Educação)
+
+Uma enciclopédia completa integrada ao app para aprender trading do zero:
+
+| Recurso | Descrição |
+|---------|-----------|
+| **Conceitos Básicos** | Explicações didáticas sobre Candles, Timeframes e Mercado |
+| **Fórmulas Detalhadas** | Todas as equações matemáticas explicadas elemento por elemento |
+| **Analogias** | Comparações do dia a dia para facilitar o entendimento (ex: RSI = corredor cansado) |
+| **Categorias** | Médias Móveis, Osciladores, Volatilidade e Termos Gerais |
+
+> � **Objetivo:** Tornar o trading acessível para iniciantes, explicando não apenas "o que" é um indicador, mas "como" ele é calculado e "por que" ele funciona.
+
+---
+
+## �🏗️ Arquitetura
 
 ```
 gastor/
@@ -330,7 +345,8 @@ gastor/
 │   │   ├── tab_results.py      # Aba Resultados + FTMO
 │   │   ├── tab_ml_studio.py    # Aba ML
 │   │   ├── tab_strategies.py   # Aba Estratégias
-│   │   └── tab_optimizer.py    # Aba Otimizador (NOVO!)
+│   │   ├── tab_optimizer.py    # Aba Otimizador (NOVO!)
+│   │   └── tab_glossary.py     # Aba Glossário (NOVO!)
 │   │
 │   └── strategies/             # 10 estratégias modulares
 │       ├── base.py

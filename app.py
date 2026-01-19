@@ -15,6 +15,7 @@ from src.ui.tab_ml_studio import render_ml_studio_tab
 from src.ui.tab_strategies import render_strategies_tab
 from src.ui.tab_results import render_results_tab
 from src.ui.tab_optimizer import render_optimizer_tab
+from src.ui.tab_glossary import render_glossary_tab
 
 
 # ===================== APP CONFIG =====================
@@ -92,12 +93,13 @@ def main():
         current_time = df.index[idx]
         
         # ===================== TABS PRINCIPAIS =====================
-        tab_trading, tab_results, tab_ml, tab_strategies, tab_optimizer = st.tabs([
+        tab_trading, tab_results, tab_ml, tab_strategies, tab_optimizer, tab_glossary = st.tabs([
             ":material/trending_up: Trading", 
             ":material/bar_chart: Resultados",
             ":material/psychology: ML Studio",
             ":material/science: Laboratório de Estratégias",
-            ":material/experiment: Otimizador"
+            ":material/experiment: Otimizador",
+            ":material/menu_book: Glossário"
         ])
         
         # TAB 1: TRADING
@@ -119,6 +121,10 @@ def main():
         # TAB 5: OTIMIZADOR
         with tab_optimizer:
             render_optimizer_tab(df)
+        
+        # TAB 6: GLOSSÁRIO
+        with tab_glossary:
+            render_glossary_tab()
     
     else:
         st.info("Carregue dados de mercado na sidebar para começar.")
