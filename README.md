@@ -255,7 +255,7 @@ Onde a mágica acontece! O ML aprende seus padrões:
 
 #### 🏆 Estratégia em Destaque: RSI Reversal
 
-> **Campeã do Otimizador** — Testada em **SOL/USDT** nos últimos **90 dias** (ref: 19/01/26)
+> **Campeã do Otimizador** — Testada em **SOL/USDT** | ⏱️ **1h** | últimos **90 dias** (ref: 19/01/26)
 
 ![RSI Reversal Champion](image/rsi_reversal_champion.png)
 

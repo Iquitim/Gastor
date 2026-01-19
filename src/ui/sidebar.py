@@ -100,6 +100,20 @@ def render_sidebar():
         )
         days = st.slider("Dias de histórico", 30, 180, 90)
         
+        # Timeframe selector
+        TIMEFRAMES = {"15m": "15 minutos", "1h": "1 hora", "4h": "4 horas", "1d": "1 dia"}
+        if 'selected_timeframe' not in st.session_state:
+            st.session_state.selected_timeframe = "1h"
+        
+        selected_tf = st.selectbox(
+            "Timeframe",
+            options=list(TIMEFRAMES.keys()),
+            format_func=lambda x: f"⏱️ {TIMEFRAMES[x]}",
+            index=list(TIMEFRAMES.keys()).index(st.session_state.selected_timeframe),
+            help="Período de cada candle (vela)"
+        )
+        st.session_state.selected_timeframe = selected_tf
+        
         # Data source selector
         from src.core.data_fetchers import AVAILABLE_DATA_SOURCES
         
@@ -131,7 +145,7 @@ def render_sidebar():
             st.session_state.data_source_error = None
             
             with st.spinner(f"Carregando de {AVAILABLE_DATA_SOURCES[selected_source]['name']}..."):
-                df = load_data(st.session_state.sb_coin_widget, days, selected_source)
+                df = load_data(st.session_state.sb_coin_widget, days, selected_source, selected_tf)
                 st.session_state.df = df
                 st.session_state.selected_index = len(df) - 1
                 
@@ -145,7 +159,7 @@ def render_sidebar():
                         st.error(f"❌ {error}")
                 elif source_used and source_used in AVAILABLE_DATA_SOURCES:
                     src_info = AVAILABLE_DATA_SOURCES[source_used]
-                    st.success(f"✅ {len(df)} candles via {src_info['icon']} {src_info['name']}")
+                    st.success(f"✅ {len(df)} candles ({selected_tf}) via {src_info['icon']} {src_info['name']}")
                 else:
                     st.success(f"✅ {len(df)} candles carregados")
         

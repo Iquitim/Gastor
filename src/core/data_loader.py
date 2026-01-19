@@ -15,7 +15,7 @@ from src.core.data_fetchers import (
 )
 
 
-def load_data(coin: str, days: int, data_source: str = "auto") -> pd.DataFrame:
+def load_data(coin: str, days: int, data_source: str = "auto", timeframe: str = "1h") -> pd.DataFrame:
     """
     Carrega dados da moeda da fonte especificada.
     
@@ -23,6 +23,7 @@ def load_data(coin: str, days: int, data_source: str = "auto") -> pd.DataFrame:
         coin: Par de trading (ex: BTC/USDT)
         days: Número de dias de histórico
         data_source: Fonte de dados (auto, ccxt_binance, ccxt_binanceus, coingecko, cryptocompare)
+        timeframe: Período das velas (1h, 4h, 1d)
     
     Retorna:
         visible_df: DataFrame com os N dias solicitados (para Trading/ML treino)
@@ -32,6 +33,7 @@ def load_data(coin: str, days: int, data_source: str = "auto") -> pd.DataFrame:
         full_df: N dias completos para Laboratório de Estratégias (sem corte OOT)
         data_source_used: Fonte de dados que foi realmente utilizada
         data_source_error: Erro (se houver) da fonte primária
+        current_timeframe: Timeframe atual
     """
     df = None
     source_used = None
@@ -44,6 +46,13 @@ def load_data(coin: str, days: int, data_source: str = "auto") -> pd.DataFrame:
     
     dm = DataManager()
     
+    # Configuração por timeframe: candles por dia
+    candles_per_day = {"15m": 96, "1h": 24, "4h": 6, "1d": 1}
+    cpd = candles_per_day.get(timeframe, 24)
+    
+    # Salva timeframe atual
+    st.session_state.current_timeframe = timeframe
+    
     # Carrega N + 30 dias extras para ter OOT
     total_days = days + 30
     
@@ -52,7 +61,7 @@ def load_data(coin: str, days: int, data_source: str = "auto") -> pd.DataFrame:
         sources_order = ["ccxt_binance", "ccxt_binanceus", "coingecko", "cryptocompare"]
         
         for src in sources_order:
-            df, error = _fetch_from_source(src, coin, total_days, dm)
+            df, error = _fetch_from_source(src, coin, total_days, dm, timeframe)
             if df is not None and len(df) > 0:
                 source_used = src
                 break
@@ -64,7 +73,7 @@ def load_data(coin: str, days: int, data_source: str = "auto") -> pd.DataFrame:
     elif data_source in ["ccxt_binance", "ccxt_binanceus"]:
         exchange = "binance" if data_source == "ccxt_binance" else "binanceus"
         try:
-            df = dm.get_ccxt_historical_data(coin, '1h', total_days, exchange)
+            df = dm.get_ccxt_historical_data(coin, timeframe, total_days, exchange)
             source_used = data_source
         except Exception as e:
             error_message = f"{type(e).__name__}: {e}"
@@ -87,7 +96,7 @@ def load_data(coin: str, days: int, data_source: str = "auto") -> pd.DataFrame:
     # Fallback para dados simulados se tudo falhar
     if df is None or len(df) == 0:
         print("[DataLoader] ⚠️ Usando dados simulados como último recurso")
-        df = dm._generate_simulated_data(coin.replace("/", ""), total_days * 24)
+        df = dm._generate_simulated_data(coin.replace("/", ""), total_days * cpd)
         source_used = "simulated"
     
     # Registra fonte utilizada
@@ -112,18 +121,18 @@ def load_data(coin: str, days: int, data_source: str = "auto") -> pd.DataFrame:
     
     # SEPARAÇÃO OOT (Out of Time)
     # Reserva os últimos 30 dias para validação "blind" do ML
-    oot_hours = 30 * 24  # 30 dias em horas
+    oot_candles = 30 * cpd  # 30 dias em candles (varia por timeframe)
     
-    if len(df) > oot_hours:
-        oot_df = df.iloc[-oot_hours:].copy()
-        visible_df = df.iloc[:-oot_hours].copy()
+    if len(df) > oot_candles:
+        oot_df = df.iloc[-oot_candles:].copy()
+        visible_df = df.iloc[:-oot_candles].copy()
         
         st.session_state.oot_df = oot_df
         
         # FULL DF para Laboratório de Estratégias (sem corte OOT)
-        # Usa exatamente os N dias solicitados (N*24 horas)
-        requested_hours = days * 24
-        st.session_state.full_df = df.iloc[-requested_hours:].copy()
+        # Usa exatamente os N dias solicitados
+        requested_candles = days * cpd
+        st.session_state.full_df = df.iloc[-requested_candles:].copy()
     else:
         # Fallback se tiver poucos dados
         visible_df = df.copy()
@@ -133,7 +142,7 @@ def load_data(coin: str, days: int, data_source: str = "auto") -> pd.DataFrame:
     return visible_df
 
 
-def _fetch_from_source(source: str, coin: str, days: int, dm: DataManager) -> tuple:
+def _fetch_from_source(source: str, coin: str, days: int, dm: DataManager, timeframe: str = "1h") -> tuple:
     """
     Tenta buscar dados de uma fonte específica.
     
@@ -142,11 +151,11 @@ def _fetch_from_source(source: str, coin: str, days: int, dm: DataManager) -> tu
     """
     try:
         if source == "ccxt_binance":
-            df = dm.get_ccxt_historical_data(coin, '1h', days, 'binance')
+            df = dm.get_ccxt_historical_data(coin, timeframe, days, 'binance')
             return (df, None) if df is not None and len(df) > 0 else (None, "Binance não retornou dados")
             
         elif source == "ccxt_binanceus":
-            df = dm.get_ccxt_historical_data(coin, '1h', days, 'binanceus')
+            df = dm.get_ccxt_historical_data(coin, timeframe, days, 'binanceus')
             return (df, None) if df is not None and len(df) > 0 else (None, "BinanceUS não retornou dados")
             
         elif source == "coingecko":
