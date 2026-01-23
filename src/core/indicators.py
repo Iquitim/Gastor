@@ -96,6 +96,91 @@ def calc_donchian(high: pd.Series, low: pd.Series, period: int = 20) -> Tuple[pd
 
 
 # =============================================================================
+# INDICADORES ESTATÍSTICOS (CONSTRUTOR)
+# =============================================================================
+
+def calc_zscore(data: pd.Series, period: int = 20) -> pd.Series:
+    """Z-Score - Mede quantos desvios padrão o preço está da média.
+    
+    Fórmula: (x - mean) / std
+    Interpretação: |Z| > 2 indica desvio significativo
+    """
+    mean = data.rolling(window=period).mean()
+    std = data.rolling(window=period).std()
+    return (data - mean) / (std + 1e-10)
+
+
+def calc_mad(data: pd.Series, period: int = 20) -> pd.Series:
+    """MAD (Median Absolute Deviation) - Dispersão robusta a outliers.
+    
+    Fórmula: median(|x - median(x)|)
+    Mais estável que desvio padrão para dados com outliers.
+    """
+    median = data.rolling(window=period).median()
+    return (data - median).abs().rolling(window=period).median()
+
+
+def calc_zscore_robust(data: pd.Series, period: int = 20) -> pd.Series:
+    """Z-Score Robusto - Versão robusta usando mediana e MAD.
+    
+    Fórmula: (x - median) / (MAD * 1.4826)
+    O fator 1.4826 normaliza o MAD para ser comparável ao desvio padrão.
+    """
+    median = data.rolling(window=period).median()
+    mad = calc_mad(data, period)
+    return (data - median) / (mad * 1.4826 + 1e-10)
+
+
+def calc_bollinger_pctb(data: pd.Series, period: int = 20, std_dev: float = 2.0) -> pd.Series:
+    """Bollinger %B - Posição percentual do preço dentro das bandas.
+    
+    Fórmula: (close - lower) / (upper - lower)
+    Interpretação: 0 = banda inferior, 1 = banda superior, >1 ou <0 = fora das bandas
+    """
+    upper, middle, lower = calc_bollinger_bands(data, period, std_dev)
+    return (data - lower) / (upper - lower + 1e-10)
+
+
+def calc_roc(data: pd.Series, period: int = 12) -> pd.Series:
+    """ROC (Rate of Change) - Variação percentual entre períodos.
+    
+    Fórmula: ((close / close_N) - 1) * 100
+    Mede momentum como percentual de mudança.
+    """
+    return ((data / data.shift(period)) - 1) * 100
+
+
+def calc_stochastic(close: pd.Series, high: pd.Series, low: pd.Series, 
+                    period: int = 14, smooth_k: int = 3, smooth_d: int = 3) -> Tuple[pd.Series, pd.Series]:
+    """Stochastic Oscillator - Posição do preço dentro do range.
+    
+    Fórmula: %K = (close - low_N) / (high_N - low_N) * 100
+    
+    Returns:
+        Tuple: (%K suavizado, %D linha de sinal)
+    Interpretação: >80 = sobrecomprado, <20 = sobrevendido
+    """
+    lowest_low = low.rolling(window=period).min()
+    highest_high = high.rolling(window=period).max()
+    
+    stoch_k = ((close - lowest_low) / (highest_high - lowest_low + 1e-10)) * 100
+    stoch_k = stoch_k.rolling(window=smooth_k).mean()  # Suavização
+    stoch_d = stoch_k.rolling(window=smooth_d).mean()  # Linha de sinal
+    
+    return stoch_k, stoch_d
+
+
+def calc_volume_ratio(volume: pd.Series, period: int = 20) -> pd.Series:
+    """Volume Ratio - Volume atual relativo à média histórica.
+    
+    Fórmula: volume / SMA(volume, N)
+    Interpretação: >1.5 = volume alto (confirmação), <0.5 = volume baixo (fraqueza)
+    """
+    avg_volume = volume.rolling(window=period).mean()
+    return volume / (avg_volume + 1e-10)
+
+
+# =============================================================================
 # SINAIS DE ENTRADA (LONG)
 # =============================================================================
 

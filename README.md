@@ -161,20 +161,24 @@ O **Gastor** foi desenhado com o **FTMO Challenge** em mente. O sistema verifica
 
 ---
 
-## 📱 As 5 Abas da Interface
+## 📱 As 7 Abas da Interface
 
 ```mermaid
 graph LR
     A["📈 Trading"] --> B["📊 Resultados"]
     B --> C["🧠 ML Studio"]
-    C --> D["🧪 Estratégias"]
+    C --> D["🧪 Laboratório"]
     D --> E["⚙️ Otimizador"]
+    E --> F["🛠️ Construtor"]
+    F --> G["📚 Glossário"]
     
     style A fill:#10b981,stroke:#059669,color:#fff
     style B fill:#f59e0b,stroke:#d97706,color:#fff
     style C fill:#8b5cf6,stroke:#7c3aed,color:#fff
     style D fill:#3b82f6,stroke:#2563eb,color:#fff
     style E fill:#ec4899,stroke:#db2777,color:#fff
+    style F fill:#14b8a6,stroke:#0d9488,color:#fff
+    style G fill:#6366f1,stroke:#4f46e5,color:#fff
 ```
 
 ---
@@ -304,7 +308,38 @@ Grid Search automático para encontrar os melhores parâmetros:
 
 ---
 
-### 6. 📖 Glossário Interativo (Educação)
+### 6. 🛠️ Construtor de Estratégias
+
+Crie suas próprias estratégias personalizadas combinando regras e indicadores:
+
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| **27 Indicadores** | RSI, EMA, SMA, Bollinger, MACD, ATR, Z-Score, Stochastic e mais |
+| **Grupos Aninhados** | Combine regras com lógica AND/OR em múltiplos grupos |
+| **Preview em Tempo Real** | Visualize a regra em linguagem natural (ex: "RSI(14) < 30") |
+| **Persistência** | Salve, carregue e gerencie suas estratégias personalizadas |
+
+**Exemplo de Estratégia Complexa:**
+```
+COMPRAR quando:
+  (RSI(14) < 30 AND Preço < Bollinger_Lower)
+  OR
+  (MACD > Signal AND Volume > Volume_MA)
+```
+
+**Indicadores Disponíveis:**
+
+| Categoria | Indicadores |
+|-----------|-------------|
+| Osciladores | RSI, Stochastic, MACD, ROC |
+| Médias | EMA, SMA, WMA, VWAP |
+| Volatilidade | ATR, Bollinger %B, Desvio Padrão |
+| Estatísticos | Z-Score, Z-Score Robusto, MAD |
+| Preço | Máximo N Candles, Mínimo N Candles, Fechamento Médio |
+
+---
+
+### 7. 📖 Glossário Interativo (Educação)
 
 Uma enciclopédia completa integrada ao app para aprender trading do zero:
 
@@ -315,17 +350,18 @@ Uma enciclopédia completa integrada ao app para aprender trading do zero:
 | **Analogias** | Comparações do dia a dia para facilitar o entendimento (ex: RSI = corredor cansado) |
 | **Categorias** | Médias Móveis, Osciladores, Volatilidade e Termos Gerais |
 
-> � **Objetivo:** Tornar o trading acessível para iniciantes, explicando não apenas "o que" é um indicador, mas "como" ele é calculado e "por que" ele funciona.
+> 📚 **Objetivo:** Tornar o trading acessível para iniciantes, explicando não apenas "o que" é um indicador, mas "como" ele é calculado e "por que" ele funciona.
 
 ---
 
-## �🏗️ Arquitetura
+## 🏗️ Arquitetura
 
 ```
 gastor/
-├── app.py                      # Entry point
+├── app.py                      # Entry point + Página de Boas-Vindas
 ├── trades.json                 # Trades persistidos
 ├── requirements.txt            # Dependências
+├── saved_strategies/           # Estratégias customizadas salvas (JSON)
 │
 ├── src/
 │   ├── data_manager.py         # Ingestão de dados (CCXT/Binance)
@@ -333,26 +369,29 @@ gastor/
 │   ├── core/                   # Lógica de negócio
 │   │   ├── config.py           # Taxas por moeda (slippage dinâmico)
 │   │   ├── portfolio.py        # Gestão de portfólio + Risk Management
-│   │   ├── indicators.py       # Indicadores técnicos
+│   │   ├── indicators.py       # Indicadores técnicos (27 indicadores)
 │   │   ├── charting.py         # Gráficos Plotly
 │   │   ├── data_loader.py      # Carregamento de dados
-│   │   ├── data_fetchers.py    # APIs: CoinGecko, CryptoCompare (NOVO!)
-│   │   └── ml.py               # Machine Learning
+│   │   ├── data_fetchers.py    # APIs: CoinGecko, CryptoCompare
+│   │   ├── ml.py               # Machine Learning
+│   │   └── strategy_storage.py # Persistência de estratégias custom (NOVO!)
 │   │
 │   ├── ui/                     # Interface Streamlit
 │   │   ├── sidebar.py          # Barra lateral
 │   │   ├── tab_trading.py      # Aba Trading
 │   │   ├── tab_results.py      # Aba Resultados + FTMO
 │   │   ├── tab_ml_studio.py    # Aba ML
-│   │   ├── tab_strategies.py   # Aba Estratégias
-│   │   ├── tab_optimizer.py    # Aba Otimizador (NOVO!)
-│   │   └── tab_glossary.py     # Aba Glossário (NOVO!)
+│   │   ├── tab_strategies.py   # Aba Laboratório de Estratégias
+│   │   ├── tab_optimizer.py    # Aba Otimizador
+│   │   ├── tab_builder.py      # Aba Construtor de Estratégias (NOVO!)
+│   │   └── tab_glossary.py     # Aba Glossário
 │   │
-│   └── strategies/             # 10 estratégias modulares
-│       ├── base.py
+│   └── strategies/             # Estratégias modulares
+│       ├── base.py             # Classe base abstrata
 │       ├── golden_cross.py
 │       ├── rsi_reversal.py
 │       ├── macd_crossover.py
+│       ├── custom_strategy.py  # Engine de estratégias dinâmicas (NOVO!)
 │       └── ...
 │
 └── tests/                      # Testes de Estresse
