@@ -69,6 +69,7 @@ def run_optimizer(df, strategies_to_test, param_steps=3, optimize_execution=Fals
         limit = 100 if optimize_execution else 200
         if len(combinations) > limit:
             import random
+            random.seed(42)  # Seed fixo para reprodutibilidade
             combinations = random.sample(combinations, limit)
             
         for params in combinations:
@@ -94,13 +95,14 @@ def run_optimizer(df, strategies_to_test, param_steps=3, optimize_execution=Fals
                 last_price = df['close'].iloc[-1]
                 last_ts = df.index[-1]
                 
-                # Usa adjust_trade_amounts para calcular amounts EXATAMENTE como na aplicação real
+                # Usa adjust_trade_amounts para calcular amounts
+                # NOTA: force_close=False para avaliar apenas trades COMPLETOS (evita data leak)
                 try:
                     adjusted_trades = adjust_trade_amounts(
                         trades_for_sim,
                         initial_balance,
                         position_pct_val,
-                        force_close=True,  # Igual ao comportamento real
+                        force_close=False,  # Avalia apenas trades completos (BUY+SELL pareados)
                         last_price=last_price,
                         last_timestamp=last_ts,
                         use_compound=use_compound
