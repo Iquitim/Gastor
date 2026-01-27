@@ -261,20 +261,21 @@ Onde a mágica acontece! O ML aprende seus padrões:
 
 #### 🏆 Estratégia em Destaque: RSI Reversal
 
-> **Campeã do Otimizador** — Testada em **SOL/USDT** | ⏱️ **1h** | últimos **90 dias** (ref: 26/01/26)
+> **Campeã do Otimizador** — Testada em **SOL/USDT** | ⏱️ **1h** | últimos **90 dias** (ref: 27/01/27)
 
 | Métrica | Resultado |
 |---------|-----------|
-| **Lucro Total** | +5.50% |
-| **Win Rate** | 100% |
-| **Max Drawdown** | 0.25% ✅ |
-| **Pares (BUY+SELL)** | 3 |
+| **Lucro Total** | +5.05% |
+| **Win Rate** | 68.4% |
+| **Max Drawdown** | 9.27% |
+| **Pares (BUY+SELL)** | 19 ✅ |
 
 **Configuração Campeã:**
-- `rsi_buy=10, rsi_sell=70`
-- Modo: Juros Compostos + Fixo
+- `rsi_buy=20, rsi_sell=60`
+- Modo: Juros Compostos + Volatilidade ATR
+- Filtro: Mínimo 6 pares (significância estatística)
 
-> 💡 Com RSI extremo (< 10), menos trades mas maior precisão. Alternativa: `rsi_buy=20, rsi_sell=60` gera 19 pares com +3.40% e 68% win rate.
+> 💡 **Dica:** Use o filtro "Mínimo de Pares" no otimizador. Estratégias com poucos trades (1-3) podem ter win rate artificialmente alto.
 
 ---
 
@@ -297,14 +298,18 @@ Grid Search automático para encontrar os melhores parâmetros:
 |----------------|-----------|
 | **Grid Search** | Testa todas as combinações de parâmetros |
 | **Otimização de Execução** | Testa Juros Compostos + Sizing Dinâmico |
+| **Filtro de Mínimo de Pares** | Ignora estratégias com poucos trades (evita overfitting) |
 | **Ranking Automático** | Ordena por PnL, Win Rate ou Drawdown |
+| **Aviso de Significância** | Alerta quando campeã tem ≤3 pares |
 | **Aplicar Campeã** | Um clique para usar a melhor configuração |
 
 **Métricas calculadas:**
 - Total PnL %
 - Win Rate %
 - Max Drawdown %
-- Total de Trades
+- Total de Pares (BUY+SELL completos)
+
+> ⚠️ **Importante:** Resultados são reprodutíveis (seed fixo no sampling). Apenas trades completos são contados (sem force_close na avaliação).
 
 ---
 
@@ -499,6 +504,29 @@ Período                   PnL %   Win Rate     Max DD   Trades
 180 dias (longo)         +7.17%      62.9%    -16.17%       35
 365 dias (1 ano)        -21.98%      61.3%    -40.70%       62
 ```
+
+---
+
+## 🔒 Reprodutibilidade dos Resultados
+
+O Gastor foi projetado para gerar **resultados consistentes** independente do dia que você rodar:
+
+### Garantias Implementadas
+
+| Problema Evitado | Solução |
+|------------------|---------|
+| Amostragem aleatória diferente | `random.seed(42)` fixo no grid search |
+| Posições abertas fechadas no preço atual | `force_close=False` na avaliação (só trades completos) |
+| Win rate inflado por poucos trades | Filtro de "Mínimo de Pares" + aviso automático |
+| Indicadores usando dados futuros | Todos usam `rolling()` e `shift(1)` (olham para trás) |
+
+### O que NÃO causa data leak:
+
+- **Indicadores** (RSI, EMA, Bollinger, MACD) - calculados com dados passados apenas
+- **Estratégias** - usam `iloc[i-1]` para comparar com candle anterior
+- **Separação OOT** - últimos 30 dias reservados e não usados no treino
+
+> ⚠️ **Resultado diferente?** Se rodar em outro dia, os **dados novos** (candles recentes) podem mudar o resultado. Mas rodando no mesmo dia/período, o resultado será idêntico.
 
 ---
 
