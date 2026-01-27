@@ -262,6 +262,7 @@ def main():
             | Otimizador | Otimização de parâmetros |
             | Construtor | Crie suas próprias estratégias |
             | Glossário | Dicionário de indicadores |
+            | Configurações | Taxas de trading por moeda |
             """)
         
         # Footer minimalista
