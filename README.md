@@ -406,12 +406,18 @@ gastor/
 │       ├── golden_cross.py
 │       ├── rsi_reversal.py
 │       ├── macd_crossover.py
-│       ├── custom_strategy.py  # Engine de estratégias dinâmicas (NOVO!)
+│       ├── custom_strategy.py  # Engine de estratégias dinâmicas
 │       └── ...
 │
-└── tests/                      # Testes de Estresse
-    └── stress/
-        └── test_rsi_reversal.py  # Valida estratégias em múltiplos períodos
+└── tests/                      # Suíte de Testes
+    ├── conftest.py             # Fixtures + Mock Streamlit
+    ├── unit/                   # Testes Unitários (56 testes)
+    │   ├── test_config.py      # Taxas e configurações
+    │   ├── test_indicators.py  # RSI, EMA, ATR, Bollinger, MACD
+    │   ├── test_portfolio.py   # Sanitização, amounts, risco
+    │   └── test_strategies.py  # Validação de estratégias
+    └── stress/                 # Testes de Estresse
+        └── test_rsi_reversal.py
 ```
 
 ---
@@ -444,6 +450,27 @@ class MinhaStrategy(BaseStrategy):
         # Sua lógica aqui
         return trades
 ```
+
+---
+
+## 🧪 Testes Unitários
+
+Suíte completa de 56 testes para garantir consistência do código:
+
+```bash
+# Executar todos os testes
+pytest tests/unit/ -v
+
+# Com cobertura
+pytest tests/unit/ --cov=src --cov-report=term-missing
+```
+
+| Módulo | Testes | Cobertura |
+|--------|--------|-----------|
+| `test_config.py` | 12 | Taxas e configurações |
+| `test_indicators.py` | 18 | RSI, EMA, SMA, ATR, Bollinger, MACD |
+| `test_portfolio.py` | 11 | Sanitização, amounts, gestão de risco |
+| `test_strategies.py` | 15 | Todas as 12 estratégias |
 
 ---
 
