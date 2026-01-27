@@ -186,6 +186,10 @@ def apply_strategy_callback(slug, params, exec_cfg, df):
         
         recalculate_portfolio(adj_trades)
         
+        # Limpa resultados de otimização após aplicar (evita confusão)
+        if 'opt_results' in st.session_state:
+            del st.session_state['opt_results']
+        
         # Feedback (será visto no próximo rerun)
         st.session_state['toast_msg'] = f"Estratégia {strategy.name} aplicada com sucesso!"
 
