@@ -16,7 +16,7 @@ def render_glossary_tab():
     """)
     
     # Filtro por categoria
-    categories = ["Todos", "📊 Médias Móveis", "📈 Osciladores", "📉 Volatilidade", "🔗 Sinais de Trading", "💰 Termos Gerais"]
+    categories = ["Todos", "📊 Médias Móveis", "📈 Osciladores", "📉 Volatilidade", "🔗 Sinais de Trading", "💰 Termos Gerais", "💸 Taxas e Custos"]
     selected_cat = st.selectbox("Filtrar por categoria", categories)
     
     st.divider()
@@ -660,3 +660,144 @@ def render_glossary_tab():
     
     st.divider()
     st.caption("💡 **Dica:** Clique em cada termo para expandir a explicação completa. Comece pelos 'Conceitos Básicos' se você é iniciante!")
+    
+    # =========================================================================
+    # TAXAS E CUSTOS
+    # =========================================================================
+    if selected_cat in ["Todos", "💸 Taxas e Custos"]:
+        st.subheader("💸 Taxas e Custos de Trading")
+        st.markdown("*Entenda os custos que afetam cada operação*")
+        
+        with st.expander("**Taxa de Exchange (Exchange Fee)** - Comissão da Corretora", expanded=False):
+            st.markdown("""
+            ### 🏦 Taxa de Exchange = Comissão cobrada pela corretora
+            
+            **Explicação simples:**  
+            Toda vez que você compra ou vende um ativo, a corretora (ex: Binance) cobra uma pequena taxa.
+            É como pagar pelo serviço de conectar você ao mercado.
+            
+            ---
+            
+            **Tipos de taxa:**
+            
+            | Tipo | Descrição | Valor típico |
+            |------|-----------|-------------|
+            | **Maker** | Você coloca uma ordem que **adiciona** liquidez | 0.10% ou menos |
+            | **Taker** | Você coloca uma ordem que **consome** liquidez | 0.10% |
+            
+            ---
+            
+            **Fórmula:**
+            """)
+            st.latex(r"\text{Custo da Taxa} = \text{Valor da Operação} \times \text{Taxa}")
+            st.markdown("""
+            **Exemplo:**
+            - Você compra R$ 1.000 de Bitcoin
+            - Taxa da exchange: 0.10%
+            - Custo: R$ 1.000 × 0.001 = **R$ 1,00**
+            
+            ---
+            
+            **Comparativo de taxas por exchange:**
+            
+            | Exchange | Taxa Spot |
+            |----------|----------|
+            | Binance | 0.10% |
+            | Coinbase | 0.50% |
+            | Kraken | 0.26% |
+            | KuCoin | 0.10% |
+            
+            **No Gastor:** O valor padrão é 0.10% (Binance). Você pode alterar na aba ⚙️ Configurações.
+            """)
+        
+        with st.expander("**Slippage (Deslizamento)** - Diferença de Preço na Execução", expanded=False):
+            st.markdown("""
+            ### 💨 Slippage = O preço "escorregou" entre sua ordem e a execução
+            
+            **Explicação simples:**  
+            Você quer comprar por R$ 100,00. Mas quando a corretora processa sua ordem,
+            o preço já mudou para R$ 100,15. Esse "escorregão" de 15 centavos é o slippage.
+            
+            ---
+            
+            **Por que acontece?**
+            
+            | Causa | Explicação |
+            |-------|------------|
+            | **Volatilidade** | Preço muda rápido em mercados agitados |
+            | **Baixa liquidez** | Poucos compradores/vendedores |
+            | **Ordens grandes** | Sua ordem consome toda a liquidez disponível |
+            | **Latência** | Demora entre sua ordem e a execução |
+            
+            ---
+            
+            **Slippage por moeda no Gastor:**
+            
+            | Moeda | Slippage | Justificativa |
+            |-------|----------|---------------|
+            | BTC/USDT | 0.10% | Maior liquidez do mercado |
+            | ETH/USDT | 0.12% | Segunda maior liquidez |
+            | SOL/USDT | 0.15% | Boa liquidez |
+            | XRP/USDT | 0.12% | Alta liquidez histórica |
+            | DOGE/USDT | 0.20% | Volátil, spreads maiores |
+            | AVAX/USDT | 0.25% | Liquidez moderada |
+            
+            ---
+            
+            **Fórmula:**
+            """)
+            st.latex(r"\text{Custo do Slippage} = \text{Valor da Operacao} \times \text{Slippage}")
+            st.markdown("""
+            **Dica:** Moedas mais negociadas têm menor slippage. Altcoins pequenas podem ter slippage de 1% ou mais!
+            
+            **No Gastor:** Você pode personalizar o slippage de cada moeda na aba ⚙️ Configurações.
+            """)
+        
+        with st.expander("**Taxa Total** - Custo Real de Cada Trade", expanded=False):
+            st.markdown("""
+            ### 📊 Taxa Total = Exchange Fee + Slippage
+            
+            **Explicação simples:**  
+            A taxa total é a soma de todos os custos que você paga em uma operação.
+            
+            ---
+            
+            **Fórmula:**
+            """)
+            st.latex(r"\text{Taxa Total} = \text{Taxa de Exchange} + \text{Slippage}")
+            st.markdown("""
+            ---
+            
+            **Exemplo prático (SOL/USDT):**
+            
+            | Componente | Valor |
+            |------------|-------|
+            | Taxa Exchange | 0.10% |
+            | Slippage | 0.15% |
+            | **Taxa Total** | **0.25%** |
+            
+            ---
+            
+            **⚠️ IMPORTANTE: Taxa é cobrada DUAS vezes!**
+            
+            Em um trade completo (compra + venda), a taxa é aplicada:
+            1. **Na compra** (entrada)
+            2. **Na venda** (saída)
+            
+            """)
+            st.latex(r"\text{Custo Total do Trade} = 2 \times \text{Taxa Total}")
+            st.markdown("""
+            **Exemplo:**
+            - Taxa Total: 0.25%
+            - Custo real de um trade completo: 2 × 0.25% = **0.50%**
+            
+            Isso significa que você precisa de pelo menos **0.50% de lucro** só para empatar!
+            
+            ---
+            
+            **Por que isso importa no Gastor?**
+            
+            O sistema aplica automaticamente essas taxas em todos os backtests,
+            garantindo que os resultados sejam **realistas**. Uma estratégia que
+            parece lucrativa sem taxas pode ser perdedora quando os custos são incluídos.
+            """)

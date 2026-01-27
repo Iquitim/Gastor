@@ -42,6 +42,7 @@ DEFAULT_SLIPPAGE = 0.003  # 0.3%
 def get_total_fee(coin: str) -> float:
     """
     Retorna a taxa total (exchange + slippage) para uma moeda.
+    Usa taxas customizadas do session_state se disponíveis.
     
     Args:
         coin: Par de trading (ex: "SOL/USDT")
@@ -49,23 +50,42 @@ def get_total_fee(coin: str) -> float:
     Returns:
         Taxa total em decimal (ex: 0.0015 = 0.15%)
     """
-    slippage = SLIPPAGE_BY_COIN.get(coin, DEFAULT_SLIPPAGE)
-    return EXCHANGE_FEE + slippage
+    try:
+        import streamlit as st
+        exchange_fee = st.session_state.get('custom_exchange_fee', EXCHANGE_FEE)
+        custom_slippage = st.session_state.get('custom_slippage', {})
+        slippage = custom_slippage.get(coin, SLIPPAGE_BY_COIN.get(coin, DEFAULT_SLIPPAGE))
+    except Exception:
+        # Fallback para quando não está rodando no Streamlit
+        exchange_fee = EXCHANGE_FEE
+        slippage = SLIPPAGE_BY_COIN.get(coin, DEFAULT_SLIPPAGE)
+    
+    return exchange_fee + slippage
 
 
 def get_fee_breakdown(coin: str) -> dict:
     """
     Retorna breakdown das taxas para uma moeda.
+    Usa taxas customizadas do session_state se disponíveis.
     
     Returns:
         Dict com exchange_fee, slippage, total_fee (todos em decimal)
     """
-    slippage = SLIPPAGE_BY_COIN.get(coin, DEFAULT_SLIPPAGE)
+    try:
+        import streamlit as st
+        exchange_fee = st.session_state.get('custom_exchange_fee', EXCHANGE_FEE)
+        custom_slippage = st.session_state.get('custom_slippage', {})
+        slippage = custom_slippage.get(coin, SLIPPAGE_BY_COIN.get(coin, DEFAULT_SLIPPAGE))
+    except Exception:
+        # Fallback para quando não está rodando no Streamlit
+        exchange_fee = EXCHANGE_FEE
+        slippage = SLIPPAGE_BY_COIN.get(coin, DEFAULT_SLIPPAGE)
+    
     return {
-        "exchange_fee": EXCHANGE_FEE,
+        "exchange_fee": exchange_fee,
         "slippage": slippage,
-        "total_fee": EXCHANGE_FEE + slippage,
-        "total_fee_pct": f"{(EXCHANGE_FEE + slippage) * 100:.2f}%"
+        "total_fee": exchange_fee + slippage,
+        "total_fee_pct": f"{(exchange_fee + slippage) * 100:.2f}%"
     }
 
 

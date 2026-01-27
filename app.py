@@ -17,6 +17,7 @@ from src.ui.tab_results import render_results_tab
 from src.ui.tab_optimizer import render_optimizer_tab
 from src.ui.tab_glossary import render_glossary_tab
 from src.ui.tab_builder import render_builder_tab
+from src.ui.tab_config import render_config_tab
 
 
 # ===================== APP CONFIG =====================
@@ -94,14 +95,15 @@ def main():
         current_time = df.index[idx]
         
         # ===================== TABS PRINCIPAIS =====================
-        tab_trading, tab_results, tab_ml, tab_strategies, tab_optimizer, tab_builder, tab_glossary = st.tabs([
+        tab_trading, tab_results, tab_ml, tab_strategies, tab_optimizer, tab_builder, tab_glossary, tab_config = st.tabs([
             ":material/trending_up: Trading", 
             ":material/bar_chart: Resultados",
             ":material/psychology: ML Studio",
             ":material/science: Laboratório de Estratégias",
             ":material/experiment: Otimizador",
             ":material/build: Construtor",
-            ":material/menu_book: Glossário"
+            ":material/menu_book: Glossário",
+            ":material/settings: Configurações"
         ])
         
         # TAB 1: TRADING
@@ -131,6 +133,10 @@ def main():
         # TAB 7: GLOSSÁRIO
         with tab_glossary:
             render_glossary_tab()
+        
+        # TAB 8: CONFIGURAÇÕES
+        with tab_config:
+            render_config_tab()
     
     else:
         # ========================================

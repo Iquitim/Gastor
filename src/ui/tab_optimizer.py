@@ -253,7 +253,7 @@ def render_optimizer_tab(df):
             m1.metric("Lucro Total", f"{best['Total PnL %']}%", border=True)
             m2.metric("Win Rate", f"{best['Win Rate %']}%", border=True)
             m3.metric("Max Drawdown", f"{best['Max DD %']}%", delta_color="inverse", border=True)
-            m4.metric("Total Trades", f"{best['Trades']}", border=True)
+            m4.metric("Pares (BUY+SELL)", f"{best['Trades']}", border=True)
             
             # Detalhes
             with st.expander("📝 Detalhes da Configuração Campeã", expanded=True):
@@ -265,8 +265,13 @@ def render_optimizer_tab(df):
             
             # Tabela Geral Simplificada
             st.markdown("##### Outros Resultados")
+            
+            # Renomeia coluna para clareza
+            display_df = res_sorted[["Estratégia", "Total PnL %", "Execução", "Win Rate %", "Max DD %", "Trades", "Params"]].copy()
+            display_df = display_df.rename(columns={"Trades": "Pares"})
+            
             st.dataframe(
-                res_sorted[["Estratégia", "Total PnL %", "Execução", "Win Rate %", "Max DD %", "Trades", "Params"]],
+                display_df,
                 use_container_width=True,
                 height=250,
                 column_config={

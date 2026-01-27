@@ -161,7 +161,7 @@ O **Gastor** foi desenhado com o **FTMO Challenge** em mente. O sistema verifica
 
 ---
 
-## 📱 As 7 Abas da Interface
+## 📱 As 8 Abas da Interface
 
 ```mermaid
 graph LR
@@ -171,6 +171,7 @@ graph LR
     D --> E["⚙️ Otimizador"]
     E --> F["🛠️ Construtor"]
     F --> G["📚 Glossário"]
+    G --> H["⚙️ Config"]
     
     style A fill:#10b981,stroke:#059669,color:#fff
     style B fill:#f59e0b,stroke:#d97706,color:#fff
@@ -179,6 +180,7 @@ graph LR
     style E fill:#ec4899,stroke:#db2777,color:#fff
     style F fill:#14b8a6,stroke:#0d9488,color:#fff
     style G fill:#6366f1,stroke:#4f46e5,color:#fff
+    style H fill:#64748b,stroke:#475569,color:#fff
 ```
 
 ---
@@ -259,22 +261,20 @@ Onde a mágica acontece! O ML aprende seus padrões:
 
 #### 🏆 Estratégia em Destaque: RSI Reversal
 
-> **Campeã do Otimizador** — Testada em **SOL/USDT** | ⏱️ **1h** | últimos **90 dias** (ref: 19/01/26)
-
-![RSI Reversal Champion](image/rsi_reversal_champion.png)
+> **Campeã do Otimizador** — Testada em **SOL/USDT** | ⏱️ **1h** | últimos **90 dias** (ref: 26/01/26)
 
 | Métrica | Resultado |
 |---------|-----------|
-| **Lucro Total** | +10.36% ✅ |
-| **Win Rate** | 70.6% |
-| **Max Drawdown** | 9.27% ✅ |
-| **Trades** | 17 |
+| **Lucro Total** | +5.50% |
+| **Win Rate** | 100% |
+| **Max Drawdown** | 0.25% ✅ |
+| **Pares (BUY+SELL)** | 3 |
 
 **Configuração Campeã:**
-- `rsi_buy=20, rsi_sell=60`
-- Modo: Juros Compostos + Volatilidade ATR
+- `rsi_buy=10, rsi_sell=70`
+- Modo: Juros Compostos + Fixo
 
-> 💡 Esta configuração passou no **FTMO Challenge**: atingiu a meta de +10% com drawdown abaixo de 10%.
+> 💡 Com RSI extremo (< 10), menos trades mas maior precisão. Alternativa: `rsi_buy=20, rsi_sell=60` gera 19 pares com +3.40% e 68% win rate.
 
 ---
 
@@ -351,6 +351,21 @@ Uma enciclopédia completa integrada ao app para aprender trading do zero:
 | **Categorias** | Médias Móveis, Osciladores, Volatilidade e Termos Gerais |
 
 > 📚 **Objetivo:** Tornar o trading acessível para iniciantes, explicando não apenas "o que" é um indicador, mas "como" ele é calculado e "por que" ele funciona.
+
+---
+
+### 8. ⚙️ Configurações de Taxas
+
+Personalize as taxas de trading usadas nos backtests:
+
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| **Tabela de Taxas** | Visualize Exchange Fee + Slippage de cada moeda |
+| **Editor Global** | Modifique a taxa de exchange (padrão: 0.10%) |
+| **Editor por Moeda** | Ajuste o slippage individualmente por ativo |
+| **Restaurar Padrões** | Volte aos valores conservadores pré-definidos |
+
+> ⚠️ **Dica:** Taxas mais realistas geram backtests mais confiáveis. Moedas menos líquidas (DOGE, AVAX) têm maior slippage.
 
 ---
 
