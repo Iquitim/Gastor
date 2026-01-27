@@ -221,11 +221,15 @@ def render_optimizer_tab(df):
             
             steps = st.slider("Grid Steps (min-max)", 2, 5, 3, help="Quantos valores testar por parâmetro.")
             
+            # Preserva valor do slider entre reruns
+            if 'min_trades_slider' not in st.session_state:
+                st.session_state.min_trades_slider = 3
+            
             min_trades = st.slider(
                 "Mínimo de Pares", 
                 min_value=1, 
                 max_value=10, 
-                value=3,
+                value=st.session_state.min_trades_slider,
                 help="Filtra estratégias com menos pares que o mínimo. Mais pares = mais significância estatística.",
                 key="min_trades_slider"
             )
