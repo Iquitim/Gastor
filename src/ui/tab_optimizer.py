@@ -221,10 +221,19 @@ def render_optimizer_tab(df):
             
             steps = st.slider("Grid Steps (min-max)", 2, 5, 3, help="Quantos valores testar por parâmetro.")
             
+            min_trades = st.slider(
+                "Mínimo de Pares", 
+                min_value=1, 
+                max_value=10, 
+                value=3,
+                help="Filtra estratégias com menos pares que o mínimo. Mais pares = mais significância estatística.",
+                key="min_trades_slider"
+            )
+            
             optimize_exec = st.checkbox(
                 "Otimizar Execução (Reinvestir/Sizing)", 
                 value=False,
-                help="Se marcado, testa combinções de Juros Compostos e Sizing Dinâmico (ATR/RSI) para cada estratégia."
+                help="Se marcado, testa combinações de Juros Compostos e Sizing Dinâmico (ATR/RSI) para cada estratégia."
             )
             
             if st.button("Iniciar Otimização 🚀", type="primary", use_container_width=True):
@@ -241,10 +250,20 @@ def render_optimizer_tab(df):
             res = st.session_state.opt_results
             
             st.markdown("#### 🏆 Top Resultados")
+            
+            # Filtro por mínimo de trades
+            min_trades_filter = st.session_state.get('min_trades_slider', 3)
+            res_filtered = res[res['Trades'] >= min_trades_filter]
+            
+            # Fallback se nenhum resultado passar no filtro
+            if res_filtered.empty:
+                st.info(f"Nenhuma estratégia com {min_trades_filter}+ pares. Mostrando todas:")
+                res_filtered = res
+            
             sort_metric = st.selectbox("Ordenar por", ["Total PnL %", "Win Rate %", "Max DD %"], index=0, label_visibility="collapsed")
             ascending = True if sort_metric == "Max DD %" else False
             
-            res_sorted = res.sort_values(by=sort_metric, ascending=ascending).reset_index(drop=True)
+            res_sorted = res_filtered.sort_values(by=sort_metric, ascending=ascending).reset_index(drop=True)
             
             best = res_sorted.iloc[0]
             
@@ -256,6 +275,14 @@ def render_optimizer_tab(df):
             m2.metric("Win Rate", f"{best['Win Rate %']}%", border=True)
             m3.metric("Max Drawdown", f"{best['Max DD %']}%", delta_color="inverse", border=True)
             m4.metric("Pares (BUY+SELL)", f"{best['Trades']}", border=True)
+            
+            # Aviso se poucos trades
+            if best['Trades'] <= 3:
+                st.warning(
+                    f"⚠️ **Atenção:** Esta estratégia tem apenas **{best['Trades']} par(es)** completo(s). "
+                    f"Resultados com poucos trades não são estatisticamente significativos. "
+                    f"Considere aumentar o período de dados ou usar o filtro 'Mínimo de Pares'."
+                )
             
             # Detalhes
             with st.expander("📝 Detalhes da Configuração Campeã", expanded=True):
