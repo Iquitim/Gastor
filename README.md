@@ -505,8 +505,6 @@ O Gastor foi projetado para gerar **resultados consistentes** independente do di
 
 | Categoria | Tecnologia |
 |-----------|------------|
-| Categoria | Tecnologia |
-|-----------|------------|
 | Frontend | Next.js, React, TailwindCSS, Recharts |
 | Backend | FastAPI, Pydantic |
 | ML | Scikit-Learn, NumPy |
@@ -517,6 +515,18 @@ O Gastor foi projetado para gerar **resultados consistentes** independente do di
 ## 🪙 Moedas Suportadas
 
 `SOL/USDT` • `ETH/USDT` • `BTC/USDT` • `XRP/USDT` • `AVAX/USDT` • `DOGE/USDT`
+
+---
+
+---
+
+## 🛣️ Próximos Passos (Roadmap)
+
+O desenvolvimento do Gastor é contínuo. As próximas etapas planejadas são:
+
+- [ ] **Live Trading**: Execução automática de estratégias em conta real/demo via API Binance.
+- [ ] **Machine Learning Avançado**: Integração com modelos Deep Learning (LSTMs).
+- [ ] **Gestão de Portfólio**: Otimização de alocação entre múltiplas estratégias simultâneas.
 
 ---
 
