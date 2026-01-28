@@ -1,0 +1,396 @@
+"""
+Backtest Engine Module
+======================
+
+Motor de execução de backtests vectorizados.
+"""
+
+import pandas as pd
+import numpy as np
+from typing import Dict, Any, List, Optional
+from core.indicators import (
+    calc_rsi, calc_ema, calc_macd, calc_bollinger_bands,
+    signal_rsi_oversold, signal_rsi_overbought,
+    signal_ema_cross_long, signal_ema_cross_short,
+    signal_macd_cross_long, signal_macd_cross_short,
+    signal_breakout_long, signal_breakdown_short
+)
+
+
+class BacktestEngine:
+    def __init__(self, data: List[Dict[str, Any]], initial_balance: float = 10000.0, fee_rate: float = 0.0):
+        self.df = pd.DataFrame(data)
+        self.initial_balance = initial_balance
+        self.balance = initial_balance
+        self.fee_rate = fee_rate
+        self.trades: List[Dict[str, Any]] = []
+        
+        # Garantir ordenação por timestamp
+        if not self.df.empty:
+            # Converter UNIX timestamp (seconds) para datetime
+            if 'time' in self.df.columns:
+                self.df['timestamp'] = pd.to_datetime(self.df['time'], unit='s')
+            else:
+                self.df['timestamp'] = pd.to_datetime(self.df['timestamp'])
+                
+            self.df = self.df.sort_values('timestamp').reset_index(drop=True)
+            # Converter colunas para float
+            cols = ['open', 'high', 'low', 'close', 'volume']
+            self.df[cols] = self.df[cols].astype(float)
+
+    def run(self, strategy_slug: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Executa a estratégia especificada.
+        """
+        if self.df.empty:
+            return {"error": "Sem dados para backtest"}
+
+        # Calcular sinais baseado na estratégia
+        if strategy_slug == "rsi_reversal":
+            self._strategy_rsi_reversal(params)
+        elif strategy_slug == "golden_cross":
+            self._strategy_golden_cross(params)
+        elif strategy_slug == "macd_crossover":
+            self._strategy_macd_crossover(params)
+        elif strategy_slug == "bollinger_bounce":
+            self._strategy_bollinger_bounce(params)
+        elif strategy_slug == "custom":
+            self._strategy_custom(params)
+        else:
+            return {"error": f"Estratégia '{strategy_slug}' não implementada"}
+
+        # Simular trades
+        metrics = self._calculate_metrics()
+        
+        return {
+            "slug": strategy_slug,
+            "params": params,
+            "trades": self.trades,
+            "metrics": metrics
+        }
+
+    def _strategy_rsi_reversal(self, params: Dict[str, Any]):
+        """
+        Estratégia RSI Reversal:
+        - Compra: RSI < rsi_buy (Oversold)
+        - Venda: RSI > rsi_sell (Overbought)
+        """
+        rsi_period = int(params.get("rsi_period", 14))
+        rsi_buy = float(params.get("rsi_buy", 30))
+        rsi_sell = float(params.get("rsi_sell", 70))
+        
+        self.df['rsi'] = calc_rsi(self.df['close'], rsi_period)
+        
+        self._simulate_trades(
+            buy_signal=self.df['rsi'] < rsi_buy,
+            sell_signal=self.df['rsi'] > rsi_sell
+        )
+
+    def _strategy_golden_cross(self, params: Dict[str, Any]):
+        """
+        Estratégia Golden Cross:
+        - Compra: EMA rápida cruza ACIMA da lenta
+        - Venda: EMA rápida cruza ABAIXO da lenta
+        """
+        fast = int(params.get("fast", 9))
+        slow = int(params.get("slow", 21))
+        
+        self.df['ema_fast'] = calc_ema(self.df['close'], fast)
+        self.df['ema_slow'] = calc_ema(self.df['close'], slow)
+        
+        buy_signal = (self.df['ema_fast'] > self.df['ema_slow']) & (self.df['ema_fast'].shift(1) <= self.df['ema_slow'].shift(1))
+        sell_signal = (self.df['ema_fast'] < self.df['ema_slow']) & (self.df['ema_fast'].shift(1) >= self.df['ema_slow'].shift(1))
+        
+        self._simulate_trades(buy_signal, sell_signal)
+
+    def _strategy_macd_crossover(self, params: Dict[str, Any]):
+        """
+        Estratégia MACD:
+        - Compra: MACD cruza acima do Signal
+        - Venda: MACD cruza abaixo do Signal
+        """
+        macd, signal = calc_macd(self.df['close'])
+        
+        buy_signal = (macd > signal) & (macd.shift(1) <= signal.shift(1))
+        sell_signal = (macd < signal) & (macd.shift(1) >= signal.shift(1))
+        
+        self._simulate_trades(buy_signal, sell_signal)
+        
+    def _strategy_bollinger_bounce(self, params: Dict[str, Any]):
+        """
+        Estratégia Bollinger Bounce:
+        - Compra: Preço toca banda inferior
+        - Venda: Preço toca banda superior
+        """
+        period = int(params.get("bb_period", 20))
+        std = float(params.get("bb_std", 2.0))
+        
+        upper, middle, lower = calc_bollinger_bands(self.df['close'], period, std)
+        
+        buy_signal = self.df['low'] <= lower
+        sell_signal = self.df['high'] >= upper
+        
+        self._simulate_trades(buy_signal, sell_signal)
+
+    def _simulate_trades(self, buy_signal: pd.Series, sell_signal: pd.Series):
+        """
+        Simula execução de trades iterando sobre os sinais.
+        """
+        position = 0  # 0 = sem posição, 1 = comprado
+        entry_price = 0.0
+        
+        for i in range(1, len(self.df)):
+            if position == 0:
+                if buy_signal.iloc[i]:
+                    # Entrada
+                    entry_price = self.df['close'].iloc[i]
+                    position = 1
+                    # Store entry size explicitly
+                    entry_balance = self.balance
+                    
+                    self.trades.append({
+                        "id": len(self.trades) + 1,
+                        "type": "BUY",
+                        "entry_date": self.df['timestamp'].iloc[i].isoformat(),
+                        "entry_ts": int(self.df['timestamp'].iloc[i].timestamp()),
+                        "entry_price": entry_price,
+                        "size": entry_balance,  # Valor da banca usado
+                        "status": "OPEN"
+                    })
+            
+            elif position == 1:
+                # Verificar saída
+                if sell_signal.iloc[i]:
+                    exit_price = self.df['close'].iloc[i]
+                    
+                    # Recuperar dados de entrada
+                    last_trade = self.trades[-1]
+                    entry_balance = last_trade["size"]
+                    
+                    # Custo com taxas (configurável, default 0.0)
+                    fee_rate = self.fee_rate 
+                    
+                    # Cálculo de Taxas Absolutas (para exibição)
+                    entry_fee = entry_balance * fee_rate
+                    gross_exit_val = entry_balance * (exit_price / entry_price)
+                    exit_fee = gross_exit_val * fee_rate
+                    total_fee = entry_fee + exit_fee
+                    
+                    # PnL Líquido (usando lógica anterior de preços ajustados para consistência)
+                    entry_with_fee = entry_price * (1 + fee_rate)
+                    exit_with_fee = exit_price * (1 - fee_rate)
+                    
+                    pnl_pct = (exit_with_fee - entry_with_fee) / entry_with_fee * 100
+                    pnl_value = (self.balance * pnl_pct) / 100
+                    
+                    self.balance += pnl_value
+                    position = 0
+                    
+                    # Atualizar trade anterior
+                    last_trade.update({
+                        "exit_date": self.df['timestamp'].iloc[i].isoformat(),
+                        "exit_ts": int(self.df['timestamp'].iloc[i].timestamp()),
+                        "exit_price": exit_price,
+                        "pnl": pnl_value,
+                        "pnl_pct": pnl_pct,
+                        "fee": total_fee,
+                        "status": "CLOSED"
+                    })
+
+    def _calculate_metrics(self) -> Dict[str, float]:
+        """Calcula métricas finais de performance."""
+        closed_trades = [t for t in self.trades if t.get("status") == "CLOSED"]
+        total_pnl = sum(t["pnl"] for t in closed_trades)
+        wins = [t for t in closed_trades if t["pnl"] > 0]
+        
+        win_rate = len(wins) / len(closed_trades) if closed_trades else 0.0
+        
+        # Calcular Equity Curve para Drawdown
+        # Começa com saldo inicial e atualiza trade a trade
+        equity = [self.initial_balance]
+        current_bal = self.initial_balance
+        
+        # Ordenar trades por data de saída
+        sorted_closed = sorted(closed_trades, key=lambda x: x["exit_date"])
+        
+        for t in sorted_closed:
+            current_bal += t["pnl"]
+            equity.append(current_bal)
+            
+        # Drawdown calculation
+        equity_series = pd.Series(equity)
+        rolling_max = equity_series.cummax()
+        drawdown = (equity_series - rolling_max) / rolling_max * 100
+        max_dd = abs(drawdown.min()) if not drawdown.empty else 0.0
+        
+        return {
+            "total_pnl": total_pnl,
+            "total_pnl_pct": ((self.balance - self.initial_balance) / self.initial_balance) * 100,
+            "final_balance": self.balance,
+            "win_rate": win_rate,
+            "profit_factor": sum(t["pnl"] for t in wins) / abs(sum(t["pnl"] for t in closed_trades if t["pnl"] < 0)) if any(t["pnl"] < 0 for t in closed_trades) else (float('inf') if wins else 0.0),
+            "max_drawdown": max_dd,
+            "total_trades": len(closed_trades),
+            "equity_curve": equity,
+            "equity_timestamps": [t["exit_ts"] for t in sorted_closed] # Timestamp de saída de cada trade
+        }
+
+    def _strategy_custom(self, params: Dict[str, Any]):
+        """Executa estratégia customizada baseada em regras JSON."""
+        # Tenta encontrar as regras nos parâmetros
+        rules = params.get("rules", None)
+        if not rules and "params" in params:
+             # Às vezes vem aninhado se passado via runStrategy(slug, {params: {...}})
+             inner = params["params"]
+             if isinstance(inner, dict) and "rules" in inner:
+                 rules = inner["rules"]
+             elif isinstance(inner, dict) and "buy" in inner:
+                 rules = inner
+        
+        if not rules:
+             # Tenta usar o próprio params se tiver estrutura de regras
+             if "buy" in params:
+                 rules = params
+
+        if not rules or not isinstance(rules, dict):
+            # Fallback seguro
+            buy_signal = pd.Series([False] * len(self.df), index=self.df.index)
+            sell_signal = pd.Series([False] * len(self.df), index=self.df.index)
+            self._simulate_trades(buy_signal, sell_signal)
+            return
+
+        buy_signal = self._evaluate_rules_vectorized(rules.get("buy", []), rules.get("buyLogic", "OR"))
+        sell_signal = self._evaluate_rules_vectorized(rules.get("sell", []), rules.get("sellLogic", "OR"))
+        
+        self._simulate_trades(buy_signal, sell_signal)
+
+    def _evaluate_rules_vectorized(self, groups: List[Dict], group_logic: str) -> pd.Series:
+        if not groups:
+            return pd.Series([False] * len(self.df), index=self.df.index)
+
+        final_signal = None 
+
+        for group in groups:
+            group_signal = None
+            rules = group.get("rules", [])
+            rule_logic = group.get("logic", "AND")
+
+            for rule in rules:
+                s_rule = self._evaluate_single_rule(rule)
+                if group_signal is None:
+                    group_signal = s_rule
+                else:
+                    if rule_logic == "AND":
+                        group_signal = group_signal & s_rule
+                    else:
+                        group_signal = group_signal | s_rule
+            
+            if group_signal is not None:
+                if final_signal is None:
+                    final_signal = group_signal
+                else:
+                    if group_logic == "AND":
+                        final_signal = final_signal & group_signal
+                    else:
+                        final_signal = final_signal | group_signal
+
+        if final_signal is None:
+             return pd.Series([False] * len(self.df), index=self.df.index)
+
+        return final_signal.fillna(False)
+
+    def _evaluate_single_rule(self, rule: Dict) -> pd.Series:
+        ind_name = rule.get("indicator", "close")
+        period = int(rule.get("period", 0))
+        lhs = self._get_indicator_series(ind_name, period)
+        
+        val_type = rule.get("valueType", "constant")
+        if val_type == "constant":
+            rhs = float(rule.get("value", 0))
+        else:
+             rhs_name = str(rule.get("value", "close"))
+             rhs_period = int(rule.get("valuePeriod", 0))
+             rhs = self._get_indicator_series(rhs_name, rhs_period)
+
+        op = rule.get("operator", "<")
+        
+        # Comparar
+        res = pd.Series([False] * len(self.df), index=self.df.index)
+        
+        if op == "<": res = lhs < rhs
+        elif op == ">": res = lhs > rhs
+        elif op == "<=": res = lhs <= rhs
+        elif op == ">=": res = lhs >= rhs
+        elif op == "==": res = lhs == rhs
+        elif op == "cross_up":
+            if isinstance(rhs, (int, float)):
+                 res = (lhs > rhs) & (lhs.shift(1) <= rhs)
+            else:
+                 res = (lhs > rhs) & (lhs.shift(1) <= rhs.shift(1))
+        elif op == "cross_down":
+             if isinstance(rhs, (int, float)):
+                 res = (lhs < rhs) & (lhs.shift(1) >= rhs)
+             else:
+                 res = (lhs < rhs) & (lhs.shift(1) >= rhs.shift(1))
+
+        return res.fillna(False)
+
+    def _get_indicator_series(self, name: str, period: int) -> pd.Series:
+        if name == "close": return self.df['close']
+        if name == "volume": return self.df['volume']
+        
+        key = f"{name}_{period}"
+        if key in self.df.columns:
+            return self.df[key]
+
+        # Cálculos dinâmicos
+        params = self.df['close']
+        
+        if name == "rsi":
+            self.df[key] = calc_rsi(params, period)
+        elif name == "ema":
+             self.df[key] = calc_ema(params, period)
+        elif name == "sma":
+             self.df[key] = params.rolling(window=period).mean()
+        elif name == "avg_volume":
+             self.df[key] = self.df['volume'].rolling(window=period).mean()
+        elif name == "median":
+             self.df[key] = params.rolling(window=period).median()
+        elif name == "mad":
+             # Rolling MAD: Median Absolute Deviation
+             # 1. Rolling Median
+             roll_median = params.rolling(window=period).median()
+             # 2. Abs Deviation
+             abs_dev = (params - roll_median).abs()
+             # 3. Rolling Median of Deviation
+             self.df[key] = abs_dev.rolling(window=period).median()
+        elif name == "zscore_robust":
+             # Robust Z-Score = (Price - Median) / (MAD * 1.4826)
+             roll_median = params.rolling(window=period).median()
+             abs_dev = (params - roll_median).abs()
+             roll_mad = abs_dev.rolling(window=period).median()
+             
+             # Avoid division by zero
+             roll_mad = roll_mad.replace(0, 0.0001)
+             
+             # Factor 1.4826 makes MAD consistent with Std Dev for normal distribution
+             k = 1.4826
+             self.df[key] = (params - roll_median) / (roll_mad * k)
+        elif name == "bb_upper":
+             std = 2.0
+             u, m, l = calc_bollinger_bands(params, period, std)
+             self.df[f"bb_upper_{period}"] = u
+             self.df[f"bb_lower_{period}"] = l
+             self.df[key] = u
+        elif name == "bb_lower":
+             if f"bb_lower_{period}" in self.df.columns: return self.df[f"bb_lower_{period}"]
+             std = 2.0
+             u, m, l = calc_bollinger_bands(params, period, std)
+             self.df[f"bb_upper_{period}"] = u
+             self.df[f"bb_lower_{period}"] = l
+             self.df[key] = l
+        
+        if key in self.df.columns:
+             return self.df[key]
+        
+        return self.df['close']

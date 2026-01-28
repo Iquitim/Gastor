@@ -102,25 +102,24 @@ Mais do que uma ferramenta de trading, este projeto é um laboratório prático 
 ---
 
 ## 🚀 Instalação
-
+    
+### Backend (API)
 ```bash
-# Clone e configure
-git clone https://github.com/Iquitim/Gastor.git
-cd gastor
-
-# Ambiente virtual
+cd backend
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# venv\Scripts\activate   # Windows
-
-# Dependências
+source venv/bin/activate
 pip install -r requirements.txt
-
-# Execute
-streamlit run app.py
+uvicorn main:app --reload
 ```
 
-Acesse em `http://localhost:8501`
+### Frontend (Interface)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Acesse em `http://localhost:3000`
 
 ---
 
@@ -378,52 +377,24 @@ Personalize as taxas de trading usadas nos backtests:
 
 ```
 gastor/
-├── app.py                      # Entry point + Página de Boas-Vindas
-├── trades.json                 # Trades persistidos
-├── requirements.txt            # Dependências
-├── saved_strategies/           # Estratégias customizadas salvas (JSON)
+├── backend/                    # API FastAPI
+│   ├── api/                    # Rotas (Endpoints)
+│   ├── core/                   # Lógica de Negócio (Backtest, Indicators)
+│   ├── strategies/             # Implementação das Estratégias
+│   └── main.py                 # Entry point
 │
-├── src/
-│   ├── data_manager.py         # Ingestão de dados (CCXT/Binance)
-│   │
-│   ├── core/                   # Lógica de negócio
-│   │   ├── config.py           # Taxas por moeda (slippage dinâmico)
-│   │   ├── portfolio.py        # Gestão de portfólio + Risk Management
-│   │   ├── indicators.py       # Indicadores técnicos (27 indicadores)
-│   │   ├── charting.py         # Gráficos Plotly
-│   │   ├── data_loader.py      # Carregamento de dados
-│   │   ├── data_fetchers.py    # APIs: CoinGecko, CryptoCompare
-│   │   ├── ml.py               # Machine Learning
-│   │   └── strategy_storage.py # Persistência de estratégias custom (NOVO!)
-│   │
-│   ├── ui/                     # Interface Streamlit
-│   │   ├── sidebar.py          # Barra lateral
-│   │   ├── tab_trading.py      # Aba Trading
-│   │   ├── tab_results.py      # Aba Resultados + FTMO
-│   │   ├── tab_ml_studio.py    # Aba ML
-│   │   ├── tab_strategies.py   # Aba Laboratório de Estratégias
-│   │   ├── tab_optimizer.py    # Aba Otimizador
-│   │   ├── tab_builder.py      # Aba Construtor de Estratégias (NOVO!)
-│   │   └── tab_glossary.py     # Aba Glossário
-│   │
-│   └── strategies/             # Estratégias modulares
-│       ├── base.py             # Classe base abstrata
-│       ├── golden_cross.py
-│       ├── rsi_reversal.py
-│       ├── macd_crossover.py
-│       ├── custom_strategy.py  # Engine de estratégias dinâmicas
-│       └── ...
+├── frontend/                   # Next.js Application
+│   ├── src/
+│   │   ├── app/                # Páginas (Next.js App Router)
+│   │   ├── components/         # Componentes React
+│   │   ├── lib/                # Context e Utils
+│   │   └── context/            # Global State
+│   └── public/                 # Assets (Imagens)
 │
-└── tests/                      # Suíte de Testes
-    ├── conftest.py             # Fixtures + Mock Streamlit
-    ├── unit/                   # Testes Unitários (56 testes)
-    │   ├── test_config.py      # Taxas e configurações
-    │   ├── test_indicators.py  # RSI, EMA, ATR, Bollinger, MACD
-    │   ├── test_portfolio.py   # Sanitização, amounts, risco
-    │   └── test_strategies.py  # Validação de estratégias
-    └── stress/                 # Testes de Estresse
-        └── test_rsi_reversal.py
+└── README.md                   # Documentação
 ```
+
+---
 
 ---
 
@@ -534,11 +505,12 @@ O Gastor foi projetado para gerar **resultados consistentes** independente do di
 
 | Categoria | Tecnologia |
 |-----------|------------|
-| Frontend | Streamlit |
-| Gráficos | Plotly |
-| ML | Scikit-Learn, XGBoost, LightGBM |
-| Dados | Pandas, NumPy |
-| Exchange | CCXT (Binance) |
+| Categoria | Tecnologia |
+|-----------|------------|
+| Frontend | Next.js, React, TailwindCSS, Recharts |
+| Backend | FastAPI, Pydantic |
+| ML | Scikit-Learn, NumPy |
+| Dados | Pandas |
 
 ---
 
