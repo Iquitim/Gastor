@@ -13,7 +13,9 @@ from core.indicators import (
     signal_rsi_oversold, signal_rsi_overbought,
     signal_ema_cross_long, signal_ema_cross_short,
     signal_macd_cross_long, signal_macd_cross_short,
-    signal_breakout_long, signal_breakdown_short
+    signal_macd_cross_long, signal_macd_cross_short,
+    signal_breakout_long, signal_breakdown_short,
+    calc_stochastic, calc_donchian, calc_volume_ratio
 )
 
 
@@ -56,6 +58,25 @@ class BacktestEngine:
             self._strategy_bollinger_bounce(params)
         elif strategy_slug == "custom":
             self._strategy_custom(params)
+        elif strategy_slug == "trend_following":
+            self._strategy_trend_following(params)
+        elif strategy_slug == "stochastic_rsi":
+            self._strategy_stochastic_rsi(params)
+        elif strategy_slug == "donchian_breakout":
+            self._strategy_donchian_breakout(params)
+        elif strategy_slug == "ema_rsi_combo":
+            self._strategy_ema_rsi_combo(params)
+        elif strategy_slug == "macd_rsi_combo":
+            self._strategy_macd_rsi_combo(params)
+        elif strategy_slug == "volume_breakout":
+            self._strategy_volume_breakout(params)
+        elif strategy_slug == "custom_strategy":
+             # Placeholder do frontend para Builder, tratar como custom vazio ou erro amigável
+             # Se vier com regras injetadas (o que deveria), roda como custom
+             if "rules" in params or "buy" in params:
+                 self._strategy_custom(params)
+             else:
+                 return {"error": "Configure essa estratégia no Construtor"}
         else:
             return {"error": f"Estratégia '{strategy_slug}' não implementada"}
 
@@ -129,6 +150,122 @@ class BacktestEngine:
         
         buy_signal = self.df['low'] <= lower
         sell_signal = self.df['high'] >= upper
+        
+        self._simulate_trades(buy_signal, sell_signal)
+
+    def _strategy_trend_following(self, params: Dict[str, Any]):
+        """
+        Trend Following:
+        - Compra: Preço > EMA AND Volume > AvgVolume * Mult
+        - Venda: Preço < EMA
+        """
+        ema_period = int(params.get("ema_period", 20))
+        vol_mult = float(params.get("volume_mult", 1.5))
+        
+        self.df['ema'] = calc_ema(self.df['close'], ema_period)
+        self.df['vol_ratio'] = calc_volume_ratio(self.df['volume'], 20)
+        
+        buy_signal = (self.df['close'] > self.df['ema']) & (self.df['vol_ratio'] > vol_mult)
+        sell_signal = self.df['close'] < self.df['ema']
+        
+        self._simulate_trades(buy_signal, sell_signal)
+
+    def _strategy_stochastic_rsi(self, params: Dict[str, Any]):
+        """
+        Stochastic RSI:
+        - Compra: Stoch K < buy_level (Oversold)
+        - Venda: Stoch K > sell_level (Overbought)
+        """
+        period = int(params.get("stoch_period", 14))
+        buy_level = int(params.get("stoch_buy", 20))
+        sell_level = int(params.get("stoch_sell", 80))
+        
+        k, d = calc_stochastic(self.df['close'], self.df['high'], self.df['low'], period)
+        
+        buy_signal = k < buy_level
+        sell_signal = k > sell_level
+        
+        self._simulate_trades(buy_signal, sell_signal)
+
+    def _strategy_donchian_breakout(self, params: Dict[str, Any]):
+        """
+        Donchian Breakout:
+        - Compra: Rompe Topo do Canal
+        - Venda: Rompe Fundo do Canal
+        """
+        period = int(params.get("period", 20))
+        upper, lower = calc_donchian(self.df['high'], self.df['low'], period)
+        
+        # Breakout: Close atual > Upper anterior
+        buy_signal = self.df['close'] > upper.shift(1)
+        sell_signal = self.df['close'] < lower.shift(1)
+        
+        self._simulate_trades(buy_signal, sell_signal)
+
+    def _strategy_ema_rsi_combo(self, params: Dict[str, Any]):
+        """
+        EMA + RSI Combo:
+        - Compra: Cross EMA Fast > Slow AND RSI > Filter (Momentum)
+        - Venda: Cross EMA Fast < Slow
+        """
+        fast = int(params.get("fast_ema", 9))
+        slow = int(params.get("slow_ema", 21))
+        rsi_min = int(params.get("rsi_filter", 50))
+        
+        ema_fast = calc_ema(self.df['close'], fast)
+        ema_slow = calc_ema(self.df['close'], slow)
+        rsi = calc_rsi(self.df['close'], 14)
+        
+        cross_up = (ema_fast > ema_slow) & (ema_fast.shift(1) <= ema_slow.shift(1))
+        cross_down = (ema_fast < ema_slow) & (ema_fast.shift(1) >= ema_slow.shift(1))
+        
+        buy_signal = cross_up & (rsi > rsi_min)
+        sell_signal = cross_down
+        
+        self._simulate_trades(buy_signal, sell_signal)
+
+    def _strategy_macd_rsi_combo(self, params: Dict[str, Any]):
+        """
+        MACD + RSI Combo:
+        - Compra: MACD Cross Up AND RSI > Confirm
+        - Venda: MACD Cross Down
+        """
+        rsi_confirm = int(params.get("rsi_confirm", 50))
+        # macd_threshold unused in simple logic, but can be added
+        
+        macd, signal = calc_macd(self.df['close'])
+        rsi = calc_rsi(self.df['close'], 14)
+        
+        cross_up = (macd > signal) & (macd.shift(1) <= signal.shift(1))
+        cross_down = (macd < signal) & (macd.shift(1) >= signal.shift(1))
+        
+        buy_signal = cross_up & (rsi > rsi_confirm)
+        sell_signal = cross_down
+        
+        self._simulate_trades(buy_signal, sell_signal)
+
+    def _strategy_volume_breakout(self, params: Dict[str, Any]):
+        """
+        Volume Breakout:
+        - Compra: Preço sobe X% AND Volume explode > Y * Média
+        - Venda: Preço cai abaixo da mínima de N candles (Trailing stop simples)
+        """
+        lookback = int(params.get("lookback", 20))
+        vol_mult = float(params.get("volume_mult", 2.0))
+        price_break = float(params.get("price_break_pct", 1.0))
+        
+        # Volume Spike
+        vol_ratio = calc_volume_ratio(self.df['volume'], lookback)
+        vol_spike = vol_ratio > vol_mult
+        
+        # Price Jump: (Close / Open - 1) * 100 > pct
+        price_jump = ((self.df['close'] / self.df['open'] - 1) * 100) > price_break
+        
+        buy_signal = vol_spike & price_jump
+        
+        # Exit: Break low of last N candles (simplified trailing)
+        low_n = self.df['low'].rolling(window=lookback).min()
+        sell_signal = self.df['close'] < low_n.shift(1)
         
         self._simulate_trades(buy_signal, sell_signal)
 

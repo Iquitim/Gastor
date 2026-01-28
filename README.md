@@ -43,25 +43,34 @@ O diferencial do Gastor é o foco em **evidência estatística**. Em vez de oper
 
 ---
 
-## 🚀 Instalação
-    
-### Backend (API)
+### ⚡ Instalação Rápida (Docker)
+A maneira mais fácil de rodar o projeto completo (Frontend + Backend + Banco de Dados):
+
+```bash
+docker compose up --build
+```
+
+Acesse:
+- **Frontend:** http://localhost:3000
+- **API Docs:** http://localhost:8000/docs
+
+### 🛠️ Instalação Manual (Desenvolvimento)
+
+#### Backend (API)
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # ou venv\Scripts\activate no Windows
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-### Frontend (Interface)
+#### Frontend (Interface)
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-
-Acesse em `http://localhost:3000`
 
 ---
 

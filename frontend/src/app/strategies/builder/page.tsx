@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import NoDataBanner from "@/components/NoDataBanner";
+import SavedStrategiesList from "@/components/SavedStrategiesList";
 import { useData } from "@/context/DataContext";
 import api from "@/lib/api";
 import { getStoredSettings } from "@/lib/settings";
@@ -77,6 +78,7 @@ export default function BuilderPage() {
     const [sellLogic, setSellLogic] = useState<"AND" | "OR">("OR");
     const [isTesting, setIsTesting] = useState(false);
     const [testResult, setTestResult] = useState<string | null>(null);
+    const [showLoadModal, setShowLoadModal] = useState(false);
 
     // Add rule to group
     const addRuleToGroup = (section: "buy" | "sell", groupId: number) => {
@@ -514,6 +516,49 @@ export default function BuilderPage() {
         }
     };
 
+    const handleSave = async () => {
+        if (!dataInfo) {
+            alert("Carregue dados de mercado primeiro.");
+            return;
+        }
+        if (!strategyName) {
+            alert("Dê um nome para a estratégia.");
+            return;
+        }
+
+        const error = validateStrategy();
+        if (error) {
+            alert(error);
+            return;
+        }
+
+        try {
+            await api.saveCustomStrategy({
+                name: strategyName,
+                description: `Criada no Builder para ${dataInfo.coin}`,
+                coin: dataInfo.coin,
+                period: dataInfo.period,
+                timeframe: dataInfo.timeframe,
+                rules: getStrategyRules()
+            });
+            alert("Estratégia salva com sucesso!");
+        } catch (e: any) {
+            console.error(e);
+            alert("Erro ao salvar: " + e.message);
+        }
+    };
+
+    const handleLoad = (strategy: any) => {
+        if (strategy.rules) {
+            setStrategyName(strategy.name);
+            setBuyGroups(strategy.rules.buy || [createEmptyGroup(1, "buy")]);
+            setSellGroups(strategy.rules.sell || [createEmptyGroup(1, "sell")]);
+            setBuyLogic(strategy.rules.buyLogic || "OR");
+            setSellLogic(strategy.rules.sellLogic || "OR");
+            setShowLoadModal(false);
+        }
+    };
+
     return (
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {/* Header */}
@@ -573,10 +618,17 @@ export default function BuilderPage() {
                         {isTesting ? "Testando..." : "Testar"}
                     </button>
                     <button
+                        onClick={handleSave}
                         disabled={!strategyName}
                         className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white rounded-md"
                     >
                         Salvar
+                    </button>
+                    <button
+                        onClick={() => setShowLoadModal(true)}
+                        className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-md"
+                    >
+                        Carregar
                     </button>
                     <button
                         onClick={handleApply}
@@ -605,6 +657,12 @@ export default function BuilderPage() {
                     <li>• <strong>Cruzamento:</strong> Use operadores de cruzamento para detectar quando um indicador cruza outro</li>
                 </ul>
             </div>
+            {showLoadModal && (
+                <SavedStrategiesList
+                    onLoad={handleLoad}
+                    onClose={() => setShowLoadModal(false)}
+                />
+            )}
         </div>
     );
 }

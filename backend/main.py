@@ -9,6 +9,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes import market, strategies, optimizer, results, glossary
+from core.database import engine, Base
+from core import models  # Important to register models
+
+# Create Tables
+Base.metadata.create_all(bind=engine)
 
 # Create app
 app = FastAPI(

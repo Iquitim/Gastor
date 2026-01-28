@@ -15,6 +15,8 @@ import numpy as np
 from core.data_loader import get_market_data
 from core.backtest import BacktestEngine
 from core.config import get_total_fee
+from core.database import get_db
+from core.models import Strategy
 
 router = APIRouter()
 
@@ -77,6 +79,11 @@ def generate_param_grid(strategy_slug: str, steps: int) -> List[Dict[str, Any]]:
         signals = np.linspace(7, 11, steps, dtype=int).tolist()
         for s in signals:
             grid.append({"signal_period": int(s)})
+
+    elif strategy_slug.startswith("custom_"):
+        # Custom strategies have fixed rules (already optimized by user in Builder)
+        # So we just test them "as is"
+        grid.append({})
     
     # Remover duplicatas que podem surgir do np.linspace com poucos steps
     unique_grid = []
@@ -137,7 +144,23 @@ async def run_optimization(request: OptimizerRequest) -> Dict[str, Any]:
             engine.balance = request.initial_balance
             engine.trades = []
             
-            result = engine.run(slug, params)
+            # Special handling for custom strategies to inject rules
+            run_params = params.copy()
+            run_slug = slug
+            
+            if slug.startswith("custom_"):
+                try:
+                    strat_id = int(slug.split("_")[1])
+                    db = next(get_db())
+                    s = db.query(Strategy).filter(Strategy.id == strat_id).first()
+                    if s:
+                        run_params["rules"] = s.rules
+                        run_slug = "custom"
+                except Exception as e:
+                    print(f"Error loading custom strat {slug}: {e}")
+                    continue
+
+            result = engine.run(run_slug, run_params)
             
             if "error" in result:
                 continue

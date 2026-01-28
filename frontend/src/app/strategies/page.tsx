@@ -5,7 +5,7 @@ import StrategyCard from "@/components/StrategyCard";
 import LinkedText from "@/components/LinkedText";
 import NoDataBanner from "@/components/NoDataBanner";
 import dynamic from "next/dynamic";
-import { STRATEGIES, CATEGORIES, getStrategiesByCategory } from "@/lib/strategies";
+import { STRATEGIES as DEFAULT_STRATEGIES, CATEGORIES, Strategy } from "@/lib/strategies";
 import { useData } from "@/context/DataContext";
 import api from "@/lib/api";
 import TradesTable from "@/components/TradesTable";
@@ -33,8 +33,35 @@ export default function StrategiesPage() {
     const [rawResult, setRawResult] = useState<any>(null); // Raw backtest result for 'Apply'
     const [includeFees, setIncludeFees] = useState(true);
 
-    const filteredStrategies = getStrategiesByCategory(selectedCategory);
-    const selectedStrategyData = STRATEGIES.find(s => s.slug === selectedStrategy);
+    const [strategies, setStrategies] = useState<Strategy[]>([]);
+    const [isLoadingStrategies, setIsLoadingStrategies] = useState(true);
+
+    // Load Strategies from API
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const list = await api.listStrategies();
+                const mapped = list.map(s => ({
+                    ...s,
+                    category: s.category as any,
+                    idealFor: s.idealFor || "Personalizada",
+                    parameters: s.parameters || {}
+                }));
+                setStrategies(mapped);
+            } catch (e) {
+                console.error("Failed to load strategies", e);
+                setStrategies(DEFAULT_STRATEGIES); // Fallback
+            } finally {
+                setIsLoadingStrategies(false);
+            }
+        };
+        load();
+    }, []);
+
+    const filteredStrategies = strategies.filter(s =>
+        selectedCategory === "all" ? true : s.category === selectedCategory
+    );
+    const selectedStrategyData = strategies.find(s => s.slug === selectedStrategy);
 
     // Initialize params when strategy changes
     useEffect(() => {
@@ -282,7 +309,10 @@ export default function StrategiesPage() {
                                     </div>
                                 ))}
                                 <div>
-                                    <label className="flex items-center gap-2 cursor-pointer bg-slate-800 px-3 py-2 rounded-md border border-slate-700 hover:border-slate-600 transition-colors">
+                                    <label className="block text-sm text-transparent mb-1 select-none">
+                                        Opções
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer bg-slate-800 px-3 py-2 rounded-md border border-slate-700 hover:border-slate-600 transition-colors h-[38px]">
                                         <input
                                             type="checkbox"
                                             checked={includeFees}

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import StrategyCard from "@/components/StrategyCard";
 import NoDataBanner from "@/components/NoDataBanner";
-import { STRATEGIES, CATEGORIES, getStrategiesByCategory } from "@/lib/strategies";
+import { STRATEGIES as DEFAULT_STRATEGIES, CATEGORIES, Strategy } from "@/lib/strategies";
 import { useData } from "@/context/DataContext";
 import api from "@/lib/api";
 import { getStoredSettings } from "@/lib/settings";
@@ -32,7 +32,31 @@ export default function OptimizerPage() {
     const [results, setResults] = useState<OptimizationResult[]>([]);
     const [error, setError] = useState<string | null>(null);
 
-    const filteredStrategies = getStrategiesByCategory(selectedCategory);
+    const [strategies, setStrategies] = useState<Strategy[]>([]);
+
+    // Load Strategies from API
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const list = await api.listStrategies();
+                const mapped = list.map(s => ({
+                    ...s,
+                    category: s.category as any,
+                    idealFor: s.idealFor || "Personalizada",
+                    parameters: s.parameters || {}
+                }));
+                setStrategies(mapped);
+            } catch (e) {
+                console.error("Failed to load strategies", e);
+                setStrategies(DEFAULT_STRATEGIES);
+            }
+        };
+        load();
+    }, []);
+
+    const filteredStrategies = strategies.filter(s =>
+        selectedCategory === "all" ? true : s.category === selectedCategory
+    );
 
     const toggleStrategy = (slug: string) => {
         setSelectedStrategies(prev =>
@@ -218,11 +242,25 @@ export default function OptimizerPage() {
                         </p>
                     </div>
 
-                    {/* Parameters */}
-                    <div className="bg-slate-900 rounded-lg border border-slate-800 p-4">
-                        <h2 className="text-lg font-semibold text-white mb-4">Configurações</h2>
 
-                        <div className="space-y-4">
+                </div>
+
+                {/* Results */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Configuration (Moved) */}
+                    <div className="bg-slate-900 rounded-lg border border-slate-800 p-4">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-semibold text-white">Configurações e Execução</h2>
+                            <button
+                                onClick={handleRunOptimizer}
+                                disabled={selectedStrategies.length === 0 || isRunning}
+                                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors"
+                            >
+                                {isRunning ? "Otimizando..." : "Iniciar Otimização"}
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
                                 <label className="block text-sm text-slate-400 mb-1">
                                     Granularidade (steps)
@@ -230,7 +268,7 @@ export default function OptimizerPage() {
                                 <select
                                     value={paramSteps}
                                     onChange={(e) => setParamSteps(Number(e.target.value))}
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-white"
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-white text-sm"
                                 >
                                     <option value={2}>2 (Rápido)</option>
                                     <option value={3}>3 (Padrão)</option>
@@ -248,43 +286,40 @@ export default function OptimizerPage() {
                                     onChange={(e) => setMinPairs(Number(e.target.value))}
                                     min={1}
                                     max={20}
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-white"
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-white text-sm"
                                 />
                             </div>
 
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={optimizeExecution}
-                                    onChange={(e) => setOptimizeExecution(e.target.checked)}
-                                    className="rounded bg-slate-800 border-slate-600 text-emerald-500"
-                                />
-                                <span className="text-sm text-slate-300">Otimizar Execução (Sizing)</span>
-                            </label>
+                            <div className="flex flex-col justify-center space-y-2">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={optimizeExecution}
+                                        onChange={(e) => setOptimizeExecution(e.target.checked)}
+                                        className="rounded bg-slate-800 border-slate-600 text-emerald-500"
+                                    />
+                                    <span className="text-sm text-slate-300">Otimizar Sizing</span>
+                                </label>
 
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={includeFees}
-                                    onChange={(e) => setIncludeFees(e.target.checked)}
-                                    className="rounded bg-slate-800 border-slate-600 text-emerald-500"
-                                />
-                                <span className="text-sm text-slate-300">Considerar Taxas (Estimadas)</span>
-                            </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={includeFees}
+                                        onChange={(e) => setIncludeFees(e.target.checked)}
+                                        className="rounded bg-slate-800 border-slate-600 text-emerald-500"
+                                    />
+                                    <span className="text-sm text-slate-300">Considerar Taxas</span>
+                                </label>
+                            </div>
+
+                            <div className="flex items-center justify-end text-right">
+                                <p className="text-xs text-slate-500">
+                                    {selectedStrategies.length} estratégias selecionadas
+                                </p>
+                            </div>
                         </div>
-
-                        <button
-                            onClick={handleRunOptimizer}
-                            disabled={selectedStrategies.length === 0 || isRunning}
-                            className="w-full mt-6 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 text-white font-medium rounded-md transition-colors"
-                        >
-                            {isRunning ? "Otimizando..." : "Iniciar Otimização"}
-                        </button>
                     </div>
-                </div>
 
-                {/* Results */}
-                <div className="lg:col-span-2">
                     <div className="bg-slate-900 rounded-lg border border-slate-800 p-4">
                         <h2 className="text-lg font-semibold text-white mb-4">Resultados</h2>
 
