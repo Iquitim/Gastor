@@ -11,93 +11,35 @@ license: mit
 
 ![Gastor Logo](image/gastor.png)
 
-# 📊 Gastor - Trading Analysis & ML Platform
+# 📊 Gastor - Algorithmic Trading & Backtesting Platform
 
-> **Sistema híbrido de trading que combina intuição humana com Machine Learning**
+> **Plataforma avançada para desenvolvimento, teste e otimização de estratégias de trading.**
 
-Gastor é uma plataforma completa de análise de trading onde você **ensina** o sistema marcando trades manualmente, e ele **aprende** seus padrões usando ML para aplicar em dados futuros.
+Gastor é um ecossistema completo para traders quantitativos que desejam validar suas hipóteses com rigor estatístico antes de arriscar capital real.
 
 ![Trading Tab](image/trading.png)
 
 ---
 
-## 🧠 Conceito: Human-in-the-Loop AI
+## 🧠 Conceito: Dados > Intuição
 
-O diferencial do Gastor é o conceito **"Human-in-the-Loop"**: em vez de usar regras fixas, o sistema aprende com **suas decisões**.
+O diferencial do Gastor é o foco em **evidência estatística**. Em vez de operar baseado em "feeling", você constrói regras lógicas e as submete a testes massivos em dados históricos.
 
-```mermaid
-flowchart LR
-    subgraph VOCE [" "]
-        A["📊 Analisa Gráfico"] --> B["✍️ Marca Trades"]
-    end
-    
-    subgraph ML [" "]
-        C["🔍 Extrai Features"] --> D["📈 Treina Modelo"]
-        D --> E["💡 Aprende Padrões"]
-    end
-    
-    subgraph RESULTADO [" "]
-        F["🧪 Backtest OOT"] --> G["✅ Valida"]
-        G --> H["🤖 Prevê Trades"]
-    end
-    
-    B --> C
-    E --> F
-    
-    style A fill:#10b981,stroke:#059669,color:#fff
-    style B fill:#10b981,stroke:#059669,color:#fff
-    style C fill:#8b5cf6,stroke:#7c3aed,color:#fff
-    style D fill:#8b5cf6,stroke:#7c3aed,color:#fff
-    style E fill:#8b5cf6,stroke:#7c3aed,color:#fff
-    style F fill:#f59e0b,stroke:#d97706,color:#fff
-    style G fill:#f59e0b,stroke:#d97706,color:#fff
-    style H fill:#f59e0b,stroke:#d97706,color:#fff
-```
+### Workflow:
 
-**👤 Verde = Você** → **🧠 Roxo = ML** → **🎯 Laranja = Resultado**
-
-### Como funciona na prática:
-
-1. **📊 Você analisa** o gráfico de candlestick com indicadores (EMA, RSI, Bollinger)
-2. **✍️ Você marca** trades clicando em "COMPRAR" ou "VENDER" nos pontos que considera ideais
-3. **🧠 O ML aprende** os padrões por trás das suas decisões (quais indicadores você estava olhando?)
-4. **📈 O sistema valida** a estratégia em dados futuros (Out-of-Time) que você nunca viu
-5. **🤖 O modelo prevê** onde comprar/vender em novos dados
-
-
-### 🚫 O que o Gastor NÃO é
-
-Para alinhar expectativas, é importante definir o escopo do projeto:
-
-| NÃO É ❌ | É ✅ |
-|----------|------|
-| Um robô de execução automática ("Black Box") | Uma **plataforma de pesquisa** (Research) |
-| Um sistema de recomendação financeira | Uma ferramenta de **aprendizado supervisionado** |
-| Um oráculo previsor de preço | Um sistema probabilístico baseado em **seus dados** |
-
-> **Objetivo:** O Gastor não opera por você. Ele amplifica sua capacidade de análise permitindo testar se sua intuição resiste a dados estatísticos.
+1. **🧪 Laboratório**: Escolha estratégias clássicas (RSI, MACD, Bollinger) ou crie a sua.
+2. **⚙️ Otimizador**: Use Grid Search para encontrar os parâmetros ideais (ex: Qual o melhor período para o RSI?).
+3. **📊 Validação**: Teste a estratégia otimizada em dados "Out-of-Sample" para evitar overfitting.
+4. **🚀 Execução**: (Em breve) Automatize a execução via API.
 
 ---
 
-## 🎯 Para que servem os Trades Manuais?
+## 🎯 Por que usar o Gastor?
 
-Os botões **COMPRAR** e **VENDER** na aba Trading criam o **dataset de treinamento** para o ML:
-
-**Em resumo:**
-- 🟢 **Trades manuais** = Gabarito para o ML
-- 🟣 **ML Studio** = Aprende o padrão dos seus trades
-- 🟡 **Modelo Treinado** = Prevê novos trades automaticamente
-
----
-
-## 🎓 Por que usar o Gastor? (Valor Educacional)
-
-Mais do que uma ferramenta de trading, este projeto é um laboratório prático para:
-
-*   🤖 **Aprender ML Financeiro:** Entenda na prática como algoritmos (Random Forest, XGBoost) "enxergam" o mercado.
-*   📉 **Visualizar Overfitting:** Veja como estratégias que parecem perfeitas no passado falham no Out-of-Time.
-*   🧠 **Identificar Viés Cognitivo:** Compare sua performance manual vs a do modelo para descobrir onde você hesita ou se precipita.
-*   ⚖️ **Humano vs Máquina:** Teste a hipótese do "Centauro" (Humano + AI > Humano ou AI sozinhos).
+*   📉 **Visualizar Overfitting:** Veja como estratégias que parecem perfeitas no passado falham em novos dados.
+*   ⚡ **Otimização Rápida:** Teste milhares de combinações de parâmetros em segundos.
+*   🧱 **Construtor Visual:** Crie estratégias complexas sem escrever código (No-Code).
+*   ✅ **Validação FTMO:** Verifique automaticamente se sua estratégia passaria nas regras de Mesa Proprietária.
 
 ---
 
@@ -165,12 +107,11 @@ O **Gastor** foi desenhado com o **FTMO Challenge** em mente. O sistema verifica
 ```mermaid
 graph LR
     A["📈 Trading"] --> B["📊 Resultados"]
-    B --> C["🧠 ML Studio"]
-    C --> D["🧪 Laboratório"]
-    D --> E["⚙️ Otimizador"]
-    E --> F["🛠️ Construtor"]
-    F --> G["📚 Glossário"]
-    G --> H["⚙️ Config"]
+    B --> C["🧪 Laboratório"]
+    C --> D["⚙️ Otimizador"]
+    D --> E["🛠️ Construtor"]
+    E --> F["📚 Glossário"]
+    F --> G["⚙️ Config"]
     
     style A fill:#10b981,stroke:#059669,color:#fff
     style B fill:#f59e0b,stroke:#d97706,color:#fff
@@ -194,13 +135,10 @@ A aba principal onde você analisa gráficos e marca trades:
 |----------------|-----------|
 | **Gráfico Candlestick** | Interativo com zoom, pan e hover |
 | **Indicadores** | EMA (9, 21), RSI (14), Bollinger (20, 2) |
-| **Botões COMPRAR/VENDER** | Cria trades manuais para treinar o ML |
 | **Histórico de Trades** | Lista editável com todas as operações |
 | **Navegação Temporal** | Slider para percorrer o histórico |
 
-![Trading Buttons](image/trading_buttons.png)
-
-> **💡 Dica:** Marque trades em pontos onde você *teria* comprado/vendido. O ML vai aprender seu estilo!
+> **💡 Dica:** Use os botões de compra e venda para simular operações manuais e ver como elas performariam.
 
 ---
 
@@ -221,27 +159,7 @@ Dashboard completo com métricas de trading e comparativo FTMO:
 
 ---
 
-### 3. 🧠 ML Studio (Treinamento de Modelos)
-
-Onde a mágica acontece! O ML aprende seus padrões:
-
-![ML Studio](image/ml_studio.png)
-
-| Algoritmo | Descrição |
-|-----------|-----------|
-| **Random Forest** | Robusto, bom para começar |
-| **XGBoost** | Mais preciso, requer ajuste |
-| **LightGBM** | Rápido, bom para grandes datasets |
-
-**Metodologia de Validação (OOT vs Split Tradicional):**
-
-> ⚠️ **Diferença Importante:** O Gastor não usa divisão aleatória (70/30) para validar o modelo.
-> 1. **Treino:** O modelo usa **100% dos seus trades manuais** para aprender o padrão com máxima eficácia.
-> 2. **Validação:** A prova real acontece no **Out-of-Time (OOT)**. Os últimos 30 dias de dados são **ocultos** (blind) durante o treino e usados apenas para testar se a estratégia funciona em "dados futuros". Isso simula a realidade do mercado e evita vício (overfitting).
-
----
-
-### 4. 🧪 Laboratório de Estratégias
+### 3. 🧪 Laboratório de Estratégias
 
 10 estratégias clássicas pré-configuradas:
 
@@ -289,7 +207,7 @@ Onde a mágica acontece! O ML aprende seus padrões:
 
 ---
 
-### 5. ⚙️ Otimizador de Estratégias
+### 4. ⚙️ Otimizador de Estratégias
 
 Grid Search automático para encontrar os melhores parâmetros:
 
@@ -312,7 +230,7 @@ Grid Search automático para encontrar os melhores parâmetros:
 
 ---
 
-### 6. 🛠️ Construtor de Estratégias
+### 5. 🛠️ Construtor de Estratégias
 
 Crie suas próprias estratégias personalizadas combinando regras e indicadores:
 
@@ -343,7 +261,7 @@ COMPRAR quando:
 
 ---
 
-### 7. 📖 Glossário Interativo (Educação)
+### 6. 📖 Glossário Interativo (Educação)
 
 Uma enciclopédia completa integrada ao app para aprender trading do zero:
 
@@ -358,7 +276,7 @@ Uma enciclopédia completa integrada ao app para aprender trading do zero:
 
 ---
 
-### 8. ⚙️ Configurações de Taxas
+### 7. ⚙️ Configurações de Taxas
 
 Personalize as taxas de trading usadas nos backtests:
 
@@ -507,7 +425,6 @@ O Gastor foi projetado para gerar **resultados consistentes** independente do di
 |-----------|------------|
 | Frontend | Next.js, React, TailwindCSS, Recharts |
 | Backend | FastAPI, Pydantic |
-| ML | Scikit-Learn, NumPy |
 | Dados | Pandas |
 
 ---
