@@ -10,6 +10,8 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gastor-network
 
   backend:
     build:
@@ -40,3 +42,7 @@ services:
 
 volumes:
   postgres_data:
+
+networks:
+  gastor-network:
+    driver: bridge
