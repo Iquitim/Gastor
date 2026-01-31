@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import api from "@/lib/api";
+import api from "../../lib/api";
 import dynamic from "next/dynamic";
 
 const EquityChart = dynamic(() => import("@/components/EquityChart"), { ssr: false });
 
-import TradesTable from "@/components/TradesTable";
+import TradesTable from "../../components/TradesTable";
 
 interface Metrics {
     finalValue: number;

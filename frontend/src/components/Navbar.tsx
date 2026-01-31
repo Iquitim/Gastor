@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { useData } from "@/context/DataContext";
+import { useData } from "../context/DataContext";
 
 // SVG Icons para design minimalista
 const Icons = {

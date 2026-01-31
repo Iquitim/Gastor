@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { useData } from "@/context/DataContext";
-import api, { OHLCVData } from "@/lib/api";
+import { useData } from "../context/DataContext";
+import api, { OHLCVData } from "../lib/api";
 
 const Chart = dynamic(() => import("@/components/Chart"), { ssr: false });
 

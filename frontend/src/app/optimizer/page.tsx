@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import StrategyCard from "@/components/StrategyCard";
-import NoDataBanner from "@/components/NoDataBanner";
-import { STRATEGIES as DEFAULT_STRATEGIES, CATEGORIES, Strategy } from "@/lib/strategies";
-import { useData } from "@/context/DataContext";
-import api from "@/lib/api";
-import { getStoredSettings } from "@/lib/settings";
+import StrategyCard from "../../components/StrategyCard";
+import NoDataBanner from "../../components/NoDataBanner";
+import { STRATEGIES as DEFAULT_STRATEGIES, CATEGORIES, Strategy } from "../../lib/strategies";
+import { useData } from "../../context/DataContext";
+import api from "../../lib/api";
+import { getStoredSettings } from "../../lib/settings";
 
 import { useRouter } from "next/navigation";
 

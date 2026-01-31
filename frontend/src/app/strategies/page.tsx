@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import StrategyCard from "@/components/StrategyCard";
-import LinkedText from "@/components/LinkedText";
-import NoDataBanner from "@/components/NoDataBanner";
+import StrategyCard from "../../components/StrategyCard";
+import LinkedText from "../../components/LinkedText";
+import NoDataBanner from "../../components/NoDataBanner";
 import dynamic from "next/dynamic";
-import { STRATEGIES as DEFAULT_STRATEGIES, CATEGORIES, Strategy } from "@/lib/strategies";
-import { useData } from "@/context/DataContext";
-import api from "@/lib/api";
-import TradesTable from "@/components/TradesTable";
-import { getStoredSettings } from "@/lib/settings";
+import { STRATEGIES as DEFAULT_STRATEGIES, CATEGORIES, Strategy } from "../../lib/strategies";
+import { useData } from "../../context/DataContext";
+import api from "../../lib/api";
+import TradesTable from "../../components/TradesTable";
+import { getStoredSettings } from "../../lib/settings";
 
 const Chart = dynamic(() => import("@/components/Chart"), { ssr: false });
 

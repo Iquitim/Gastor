@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import { DataProvider } from "@/context/DataContext";
+import Navbar from "../components/Navbar";
+import { DataProvider } from "../context/DataContext";
 
 const inter = Inter({
   variable: "--font-inter",

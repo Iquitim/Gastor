@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import NoDataBanner from "@/components/NoDataBanner";
-import SavedStrategiesList from "@/components/SavedStrategiesList";
-import { useData } from "@/context/DataContext";
-import api from "@/lib/api";
-import { getStoredSettings } from "@/lib/settings";
+import NoDataBanner from "../../../components/NoDataBanner";
+import SavedStrategiesList from "../../../components/SavedStrategiesList";
+import { useData } from "../../../context/DataContext";
+import api from "../../../lib/api";
+import { getStoredSettings } from "../../../lib/settings";
 import { useRouter } from "next/navigation";
 
 // Indicadores disponíveis para construir regras
