@@ -21,8 +21,22 @@ services:
       - DATABASE_URL=postgresql://gastor:gastor_password@db:5432/gastor_db
     depends_on:
       - db
+    networks:
+      - gastor-network
     volumes:
       - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://136.248.126.148:8000
+    container_name: gastor-frontend
+    ports:
+      - "80:80"
+    networks:
+      - gastor-network
 
 volumes:
   postgres_data:
