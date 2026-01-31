@@ -80,7 +80,7 @@ export default function StrategiesPage() {
         if (!selectedStrategy || !hasData || !dataInfo) return;
 
         // Settings helper
-        const { customFee, initialBalance: customBalance } = getStoredSettings(dataInfo.coin);
+        const { customFee, initialBalance: customBalance, useCompound } = getStoredSettings(dataInfo.coin);
 
         setIsRunning(true);
         setError(null);
@@ -95,7 +95,7 @@ export default function StrategiesPage() {
                 days: parseInt(dataInfo.period) || 90,
                 timeframe: dataInfo.timeframe,
                 initial_balance: customBalance,
-                use_compound: false, // Assuming this is fixed for now
+                use_compound: useCompound,
                 sizing_method: "fixo", // Assuming this is fixed for now
                 params: currentParams, // Send only key-value pairs
                 include_fees: includeFees, // Pass includeFees to API
@@ -312,7 +312,7 @@ export default function StrategiesPage() {
                                     <label className="block text-sm text-transparent mb-1 select-none">
                                         Opções
                                     </label>
-                                    <label className="flex items-center gap-2 cursor-pointer bg-slate-800 px-3 py-2 rounded-md border border-slate-700 hover:border-slate-600 transition-colors h-[38px]">
+                                    <label className="flex items-center gap-2 cursor-pointer bg-slate-800 px-3 py-2 rounded-md border border-slate-700 hover:border-slate-600 transition-colors h-[38px] mb-2">
                                         <input
                                             type="checkbox"
                                             checked={includeFees}

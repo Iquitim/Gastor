@@ -20,11 +20,12 @@ from core.indicators import (
 
 
 class BacktestEngine:
-    def __init__(self, data: List[Dict[str, Any]], initial_balance: float = 10000.0, fee_rate: float = 0.0):
+    def __init__(self, data: List[Dict[str, Any]], initial_balance: float = 10000.0, fee_rate: float = 0.0, use_compound: bool = True):
         self.df = pd.DataFrame(data)
         self.initial_balance = initial_balance
         self.balance = initial_balance
         self.fee_rate = fee_rate
+        self.use_compound = use_compound
         self.trades: List[Dict[str, Any]] = []
         
         # Garantir ordenação por timestamp
@@ -283,7 +284,12 @@ class BacktestEngine:
                     entry_price = self.df['close'].iloc[i]
                     position = 1
                     # Store entry size explicitly
-                    entry_balance = self.balance
+                    # Definir tamanho da posição
+                    if self.use_compound:
+                        entry_balance = self.balance
+                    else:
+                        entry_balance = self.initial_balance
+
                     
                     self.trades.append({
                         "id": len(self.trades) + 1,

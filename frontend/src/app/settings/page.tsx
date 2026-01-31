@@ -21,7 +21,7 @@ export default function SettingsPage() {
     const [coins, setCoins] = useState(DEFAULT_COINS);
     const [initialBalance, setInitialBalance] = useState(10000);
     const [positionSize, setPositionSize] = useState(100);
-    const [useCompound, setUseCompound] = useState(false);
+    const [useCompound, setUseCompound] = useState(true);
     const [saved, setSaved] = useState(false);
 
     useEffect(() => {
@@ -52,7 +52,7 @@ export default function SettingsPage() {
             setCoins(DEFAULT_COINS);
             setInitialBalance(10000);
             setPositionSize(100);
-            setUseCompound(false);
+            setUseCompound(true);
             localStorage.removeItem("gastor_settings");
             setSaved(false);
         }
@@ -113,14 +113,14 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="flex items-end">
-                        <label className="flex items-center gap-2 cursor-pointer">
+                        <label className="flex items-center gap-2 cursor-pointer bg-slate-800 px-3 py-2 rounded-md border border-slate-700 hover:border-slate-600 transition-colors h-[42px]">
                             <input
                                 type="checkbox"
                                 checked={useCompound}
                                 onChange={(e) => setUseCompound(e.target.checked)}
-                                className="rounded bg-slate-800 border-slate-600 text-emerald-500"
+                                className="rounded bg-slate-900 border-slate-600 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-900"
                             />
-                            <span className="text-slate-300">Juros Compostos</span>
+                            <span className="text-sm text-slate-300 select-none">Juros Compostos</span>
                         </label>
                     </div>
                 </div>

@@ -374,7 +374,8 @@ async def run_strategy(slug: str, params: StrategyParams) -> Dict[str, Any]:
         engine = BacktestEngine(
             data=market_data["data"],
             initial_balance=params.initial_balance,
-            fee_rate=fee_rate
+            fee_rate=fee_rate,
+            use_compound=params.use_compound
         )
         
         # 3. Executar Backtest
