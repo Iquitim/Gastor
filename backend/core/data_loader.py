@@ -83,6 +83,21 @@ async def fetch_binance_klines(
                 print(f"Erro ao buscar dados Binance: {e}")
                 break
     
+    # Remove the last candle if it's the current (unfinished) one
+    # Binance kline time is Open Time.
+    if all_candles:
+        last_candle_time = all_candles[-1]["time"] * 1000 # back to ms
+        # Calculate theoretical close time of the last candle
+        interval_ms_map = {"1h": 3600000, "4h": 14400000, "1d": 86400000}
+        duration = interval_ms_map.get(interval, 3600000) # Default 1h
+        
+        last_candle_close_time = last_candle_time + duration
+        now_ms = int(datetime.now().timestamp() * 1000)
+        
+        # If the candle hasn't closed yet, remove it to ensure stability
+        if last_candle_close_time > now_ms:
+            all_candles.pop()
+
     return all_candles
 
 

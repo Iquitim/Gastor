@@ -26,11 +26,11 @@ class StrategyParams(BaseModel):
     coin: str = "SOL/USDT"
     days: int = 90
     timeframe: str = "1h"
-    initial_balance: float = 10000.0
-    use_compound: bool = False
-    sizing_method: str = "fixo"
-    include_fees: bool = True
-    fee_rate: Optional[float] = None
+    initial_balance: float
+    use_compound: bool
+    sizing_method: str
+    include_fees: bool
+    fee_rate: float
     params: Dict[str, Any] = {}
 
 
@@ -215,6 +215,10 @@ class ActiveStrategyRequest(BaseModel):
     period: str
     timeframe: str
     initial_balance: float
+    use_compound: bool
+    sizing_method: str
+    include_fees: bool
+    fee_rate: float
     backtest_metrics: Dict[str, Any]
 
 @router.post("/active/set")

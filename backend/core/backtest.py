@@ -379,24 +379,40 @@ class BacktestEngine:
             })
 
     def _calculate_metrics(self) -> Dict[str, float]:
-        """Calcula métricas finais de performance."""
-        closed_trades = [t for t in self.trades if t.get("status") == "CLOSED"]
-        total_pnl = sum(t["pnl"] for t in closed_trades)
-        wins = [t for t in closed_trades if t["pnl"] > 0]
+        """Calcula métricas finais de performance (Baseado em Trades Fechados)."""
         
+        # Filtrar apenas trades FECHADOS para métricas de resultado final
+        closed_trades = [t for t in self.trades if t.get("status") == "CLOSED"]
+        
+        # Total PnL (Realizado)
+        total_pnl = sum(t["pnl"] for t in closed_trades)
+        
+        # Saldo Final (Realizado) - Ignora flutuação de abertos
+        final_balance = self.balance 
+        
+        # Win Rate
+        wins = [t for t in closed_trades if t["pnl"] > 0]
+        losses = [t for t in closed_trades if t["pnl"] < 0]
         win_rate = len(wins) / len(closed_trades) if closed_trades else 0.0
         
-        # Calcular Equity Curve para Drawdown
-        # Começa com saldo inicial e atualiza trade a trade
+        # Profit Factor
+        gross_profit = sum(t["pnl"] for t in wins)
+        gross_loss = abs(sum(t["pnl"] for t in losses))
+        profit_factor = gross_profit / gross_loss if gross_loss > 0 else (float('inf') if gross_profit > 0 else 0.0)
+
+        # Calcular Equity Curve para Drawdown (Baseado em Realized Balance)
         equity = [self.initial_balance]
         current_bal = self.initial_balance
         
-        # Ordenar trades por data de saída
-        sorted_closed = sorted(closed_trades, key=lambda x: x["exit_date"])
+        # Ordenar trades fechados por data de saída (para curve de saldo realizado)
+        sorted_closed = sorted(closed_trades, key=lambda x: x["exit_ts"] if x.get("exit_ts") else 0)
         
+        equity_timestamps = []
         for t in sorted_closed:
             current_bal += t["pnl"]
             equity.append(current_bal)
+            equity_timestamps.append(t["entry_ts"]) # Use entry ts for x-axis visual or exit? typically exit is when balance updates. 
+            # But frontend might expect entry timestamp mapping.
             
         # Drawdown calculation
         equity_series = pd.Series(equity)
@@ -406,14 +422,14 @@ class BacktestEngine:
         
         return {
             "total_pnl": total_pnl,
-            "total_pnl_pct": ((self.balance - self.initial_balance) / self.initial_balance) * 100,
-            "final_balance": self.balance,
+            "total_pnl_pct": ((final_balance - self.initial_balance) / self.initial_balance) * 100,
+            "final_balance": final_balance,
             "win_rate": win_rate,
-            "profit_factor": sum(t["pnl"] for t in wins) / abs(sum(t["pnl"] for t in closed_trades if t["pnl"] < 0)) if any(t["pnl"] < 0 for t in closed_trades) else (float('inf') if wins else 0.0),
+            "profit_factor": profit_factor,
             "max_drawdown": max_dd,
-            "total_trades": len(closed_trades),
+            "total_trades": len(closed_trades), # Conta apenas fechados/realizados
             "equity_curve": equity,
-            "equity_timestamps": [t["exit_ts"] for t in sorted_closed] # Timestamp de saída de cada trade
+            "equity_timestamps": equity_timestamps
         }
 
     def _strategy_custom(self, params: Dict[str, Any]):

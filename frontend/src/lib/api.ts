@@ -175,6 +175,7 @@ export const api = {
             include_fees: boolean;
             fee_rate?: number;
             initial_balance?: number;
+            use_compound?: boolean;
         }
     ) =>
         fetchAPI<{
@@ -205,7 +206,19 @@ export const api = {
             body: JSON.stringify({ trades, initial_balance, coin }),
         }),
 
-    setActiveStrategy: (strategy: any) =>
+    setActiveStrategy: (strategy: {
+        strategy_slug: string;
+        params: any;
+        coin: string;
+        period: string;
+        timeframe: string;
+        initial_balance: number;
+        use_compound: boolean;
+        sizing_method: string;
+        include_fees: boolean;
+        fee_rate: number;
+        backtest_metrics: any;
+    }) =>
         fetchAPI<{ message: string }>("/api/strategies/active/set", {
             method: "POST",
             body: JSON.stringify(strategy),

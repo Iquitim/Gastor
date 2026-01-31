@@ -434,7 +434,7 @@ export default function BuilderPage() {
     const runBacktest = async () => {
         if (!dataInfo) throw new Error("Sem dados carregados");
 
-        const { customFee, initialBalance } = getStoredSettings(dataInfo.coin);
+        const { customFee, initialBalance, useCompound } = getStoredSettings(dataInfo.coin);
 
         const rules = getStrategyRules();
         const runParams = {
@@ -442,8 +442,10 @@ export default function BuilderPage() {
             days: parseInt(dataInfo.period) || 90,
             timeframe: dataInfo.timeframe,
             initial_balance: initialBalance,
+            use_compound: useCompound,
+            sizing_method: "fixo", // Explicitly set sizing method
             include_fees: customFee !== undefined,
-            fee_rate: customFee !== undefined ? customFee : 0.0,
+            fee_rate: customFee !== undefined ? (customFee ?? 0.0) : 0.0,
             params: { rules }
         };
 
@@ -493,6 +495,9 @@ export default function BuilderPage() {
             return;
         }
 
+        // Recuperar settings localmente para usar no setActiveStrategy
+        const { initialBalance, useCompound, customFee } = getStoredSettings(dataInfo.coin);
+
         try {
             const result = await runBacktest();
 
@@ -505,7 +510,11 @@ export default function BuilderPage() {
                 coin: dataInfo.coin,
                 period: dataInfo.period,
                 timeframe: dataInfo.timeframe,
-                initial_balance: 10000,
+                initial_balance: initialBalance,
+                use_compound: useCompound, /**/
+                sizing_method: "fixo",
+                include_fees: customFee !== undefined,
+                fee_rate: customFee !== undefined ? (customFee ?? 0.0) : 0.0,
                 backtest_metrics: result
             });
 

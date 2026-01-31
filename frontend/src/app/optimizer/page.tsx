@@ -81,7 +81,7 @@ export default function OptimizerPage() {
         if (!confirmed) return;
 
         // Settings helper
-        const { customFee, initialBalance: customBalance } = getStoredSettings(dataInfo.coin);
+        const { customFee, initialBalance: customBalance, useCompound } = getStoredSettings(dataInfo.coin);
 
         try {
             const paramsObj: Record<string, any> = {};
@@ -96,8 +96,10 @@ export default function OptimizerPage() {
                 days: parseInt(dataInfo.period) || 90,
                 timeframe: dataInfo.timeframe,
                 initial_balance: customBalance,
+                use_compound: useCompound,
+                sizing_method: "fixo", // Explicitly set sizing method
                 include_fees: includeFees,
-                fee_rate: includeFees ? customFee : 0.0,
+                fee_rate: includeFees ? (customFee ?? 0.0) : 0.0,
                 params: paramsObj
             };
 
@@ -113,7 +115,11 @@ export default function OptimizerPage() {
                 coin: dataInfo.coin,
                 period: dataInfo.period,
                 timeframe: dataInfo.timeframe,
-                initial_balance: 10000,
+                initial_balance: customBalance,
+                use_compound: useCompound,
+                sizing_method: "fixo",
+                include_fees: includeFees,
+                fee_rate: includeFees ? (customFee ?? 0.0) : 0.0,
                 backtest_metrics: fullResult
             });
 
@@ -131,7 +137,7 @@ export default function OptimizerPage() {
         if (selectedStrategies.length === 0 || !hasData || !dataInfo) return;
 
         // Settings helper
-        const { customFee, initialBalance: customBalance } = getStoredSettings(dataInfo.coin);
+        const { customFee, initialBalance: customBalance, useCompound } = getStoredSettings(dataInfo.coin);
 
         setIsRunning(true);
         setError(null);
@@ -146,8 +152,9 @@ export default function OptimizerPage() {
                 optimize_execution: optimizeExecution,
                 min_pairs: minPairs,
                 include_fees: includeFees,
-                fee_rate: includeFees ? customFee : 0.0, // Pass custom fee
-                initial_balance: customBalance
+                fee_rate: includeFees ? (customFee ?? 0.0) : 0.0, // Pass custom fee
+                initial_balance: customBalance,
+                use_compound: useCompound
             });
 
             // Mapear resultados para o formato esperado

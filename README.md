@@ -54,6 +54,15 @@ Acesse:
 - **Frontend:** http://localhost:3000
 - **API Docs:** http://localhost:8000/docs
 
+### ☢️ Limpeza Total (Reset Docker)
+Se precisar zerar tudo (containers, volumes e imagens) e recomeçar do zero:
+
+```bash
+chmod +x nuke_docker.sh
+./nuke_docker.sh
+```
+Isso remove TODOS os resíduos do Docker para garantir um ambiente limpo. Para subir novamente, use o `docker compose up --build`.
+
 ### 🛠️ Instalação Manual (Desenvolvimento)
 
 #### Backend (API)
@@ -408,6 +417,15 @@ Período                   PnL %   Win Rate     Max DD   Trades
 ## 🔒 Reprodutibilidade dos Resultados
 
 O Gastor foi projetado para gerar **resultados consistentes** independente do dia que você rodar:
+
+### 🛡️ Rigor na Configuração (Sem "Chutes")
+
+O Backend opera com política de **Tolerância Zero** para configurações padrão implícitas. Isso garante reprodutibilidade total:
+*   **Nada é assumido:** O Frontend DEVE enviar explicitamente `initial_balance`, `use_compound`, `include_fees` e `fee_rate` em TODAS as requisições.
+*   **Validação Estrita:** Se faltar qualquer parâmetro, o sistema rejeita a operação (Erro 422), impedindo que simulações rodem com valores padrão incorretos.
+
+### 💰 PnL Realizado (Money in the Pocket)
+*   **Realized Only:** Todas as métricas de PnL (Lucro/Prejuízo) consideram APENAS trades **fechados**. Ganhos não realizados (posições abertas) não entram na conta final, simulando o saldo real disponível para saque.
 
 ### Garantias Implementadas
 

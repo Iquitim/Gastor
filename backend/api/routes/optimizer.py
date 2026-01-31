@@ -27,12 +27,13 @@ class OptimizerRequest(BaseModel):
     coin: str = "SOL/USDT"
     days: int = 90
     timeframe: str = "1h"
-    initial_balance: float = 10000.0
+    initial_balance: float
     param_steps: int = 3  # Granularidade do grid search
     optimize_execution: bool = False  # Testar compound + sizing
     min_pairs: int = 1  # Mínimo de trades completos
-    include_fees: bool = False  # Default False for optimization? Or True? User complained it was considering fees.
-    fee_rate: Optional[float] = None
+    include_fees: bool
+    fee_rate: float
+    use_compound: bool
 
 
 class OptimizationResult(BaseModel):
@@ -129,7 +130,7 @@ async def run_optimization(request: OptimizerRequest) -> Dict[str, Any]:
     else:
         fee_rate = get_total_fee(request.coin) if request.include_fees else 0.0
 
-    engine = BacktestEngine(data, request.initial_balance, fee_rate=fee_rate)
+    engine = BacktestEngine(data, request.initial_balance, fee_rate=fee_rate, use_compound=request.use_compound)
     
     for slug in request.strategies:
         # Gerar grid de parâmetros
@@ -174,8 +175,13 @@ async def run_optimization(request: OptimizerRequest) -> Dict[str, Any]:
             results.append({
                 "strategy": slug,
                 "params": params,
-                "execution_config": {"compound": False}, # TODO: Implementar compound
-                "metrics": metrics
+                "execution_config": {"compound": request.use_compound}, 
+                "metrics": {
+                    "total_pnl": metrics["total_pnl"],
+                    "total_pnl_pct": metrics["total_pnl_pct"], # Já inclui Open PnL se BacktestEngine atualizado
+                    "win_rate": metrics["win_rate"],
+                    "total_trades": metrics["total_trades"]
+                }
             })
 
     # 3. Ordenar resultados (Ranking)

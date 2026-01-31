@@ -99,7 +99,7 @@ export default function StrategiesPage() {
                 sizing_method: "fixo", // Assuming this is fixed for now
                 params: currentParams, // Send only key-value pairs
                 include_fees: includeFees, // Pass includeFees to API
-                fee_rate: includeFees ? customFee : 0.0, // Pass custom fee if fees enabled
+                fee_rate: includeFees ? (customFee ?? 0.0) : 0.0, // Pass custom fee if fees enabled
             });
 
             setRawResult(result);
@@ -158,13 +158,20 @@ export default function StrategiesPage() {
         if (!selectedStrategy || !rawResult) return;
 
         try {
+            // Retrieve latest settings for correct application
+            const { initialBalance: customBalance, useCompound, customFee } = getStoredSettings(dataInfo?.coin || "SOL/USDT");
+
             await api.setActiveStrategy({
                 strategy_slug: selectedStrategy,
                 params: currentParams,
                 coin: dataInfo?.coin || "SOL/USDT",
                 period: dataInfo?.period || "90 dias",
                 timeframe: dataInfo?.timeframe || "1h",
-                initial_balance: 10000,
+                initial_balance: customBalance,
+                use_compound: useCompound,
+                sizing_method: "fixo",
+                include_fees: includeFees,
+                fee_rate: includeFees ? (customFee ?? 0.0) : 0.0,
                 backtest_metrics: rawResult
             });
             alert("Estratégia aplicada com sucesso! Confira na aba Resultados.");
