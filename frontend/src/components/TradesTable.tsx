@@ -11,6 +11,7 @@ interface Trade {
     pnl: number;
     pnl_pct?: number;
     type: "BUY" | "SELL";
+    exit_balance?: number;
 }
 
 interface TradesTableProps {
@@ -44,6 +45,7 @@ export default function TradesTable({ trades }: TradesTableProps) {
                             <th className="px-4 py-3 text-right">Investido</th>
                             <th className="px-4 py-3 text-right">Taxas</th>
                             <th className="px-4 py-3 text-right">PnL Líq.</th>
+                            <th className="px-4 py-3 text-right">Saldo Total</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
@@ -79,6 +81,9 @@ export default function TradesTable({ trades }: TradesTableProps) {
                                         <span className="block text-xs font-normal opacity-70">
                                             {trade.pnl_pct?.toFixed(2)}%
                                         </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-right font-medium text-white">
+                                        {formatCurrency(trade.exit_balance || 0)}
                                     </td>
                                 </tr>
                             );

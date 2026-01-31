@@ -26,6 +26,7 @@ class BacktestEngine:
         self.balance = initial_balance
         self.fee_rate = fee_rate
         self.use_compound = use_compound
+        print(f"DEBUG: BacktestEngine initialized. use_compound={self.use_compound} (Type: {type(self.use_compound)})")
         self.trades: List[Dict[str, Any]] = []
         
         # Garantir ordenação por timestamp
@@ -288,7 +289,9 @@ class BacktestEngine:
                     if self.use_compound:
                         entry_balance = self.balance
                     else:
-                        entry_balance = self.initial_balance
+                        # Se não usar juros compostos, tenta usar o valor inicial fixo.
+                        # MAS, se o saldo atual for menor que o inicial (prejuízo), só pode usar o que tem.
+                        entry_balance = min(self.initial_balance, self.balance)
 
                     
                     self.trades.append({
@@ -324,7 +327,7 @@ class BacktestEngine:
                     exit_with_fee = exit_price * (1 - fee_rate)
                     
                     pnl_pct = (exit_with_fee - entry_with_fee) / entry_with_fee * 100
-                    pnl_value = (self.balance * pnl_pct) / 100
+                    pnl_value = (entry_balance * pnl_pct) / 100
                     
                     self.balance += pnl_value
                     position = 0
@@ -337,8 +340,43 @@ class BacktestEngine:
                         "pnl": pnl_value,
                         "pnl_pct": pnl_pct,
                         "fee": total_fee,
+                        "exit_balance": self.balance,
                         "status": "CLOSED"
                     })
+        
+        # Calcular PnL não realizado para posição aberta no final
+        if position == 1 and self.trades:
+            last_trade = self.trades[-1]
+            last_idx = len(self.df) - 1
+            current_price = self.df['close'].iloc[last_idx]
+            
+            # Usar lógica similar de taxas para estimativa
+            entry_price = last_trade["entry_price"]
+            fee_rate = self.fee_rate
+            
+            entry_with_fee = entry_price * (1 + fee_rate)
+            exit_with_fee = current_price * (1 - fee_rate)
+            
+            pnl_pct = (exit_with_fee - entry_with_fee) / entry_with_fee * 100
+            
+            # Calcular valor nominal baseado no tamanho da posição
+            s_size = last_trade["size"]
+            pnl_value = (s_size * pnl_pct) / 100
+            
+            # Calcular Taxas Estimadas (Entrada já paga + Saída estimada)
+            entry_fee = s_size * fee_rate
+            gross_exit_val = s_size * (current_price / entry_price)
+            exit_fee = gross_exit_val * fee_rate
+            total_fee = entry_fee + exit_fee
+
+            # Atualizar trade (mantendo status OPEN e sem data de saída)
+            last_trade.update({
+                "exit_price": current_price,
+                "pnl": pnl_value,
+                "pnl_pct": pnl_pct,
+                "fee": total_fee,
+                "exit_balance": self.balance + pnl_value
+            })
 
     def _calculate_metrics(self) -> Dict[str, float]:
         """Calcula métricas finais de performance."""

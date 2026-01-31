@@ -33,7 +33,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://136.248.126.148:8000
+        NEXT_PUBLIC_API_URL: http://localhost:8000
     container_name: gastor-frontend
     ports:
       - "80:80"

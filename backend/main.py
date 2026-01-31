@@ -29,6 +29,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",           # Dev local
+        "http://localhost",                # Docker prod local
+        "http://localhost:80",             # Docker prod local explicit
         "https://*.pages.dev",             # Cloudflare Pages
         "https://gastor.pages.dev",        # Produção (ajustar nome)
     ],
