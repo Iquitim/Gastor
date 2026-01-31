@@ -7,6 +7,11 @@ COPY . .
 # A variável de ambiente precisa ser definida no build para estáticos
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# Aumenta limite de memória do Node para evitar crashes
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+# Desabilita telemetria durante build
+ENV NEXT_TELEMETRY_DISABLED=1
+
 RUN npm run build
 
 # Estágio de Servidor (Nginx)
