@@ -49,6 +49,11 @@ const Icons = {
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
     ),
+    live: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
+        </svg>
+    ),
 };
 
 const navItems = [
@@ -57,6 +62,7 @@ const navItems = [
     { href: "/strategies/builder", label: "Construtor", icon: Icons.builder },
     { href: "/optimizer", label: "Otimizador", icon: Icons.optimizer },
     { href: "/results", label: "Resultados", icon: Icons.results },
+    { href: "/live", label: "Paper Trading", icon: Icons.live },
     { href: "/glossary", label: "Glossário", icon: Icons.glossary },
     { href: "/settings", label: "Configurações", icon: Icons.settings },
 ];
@@ -105,8 +111,8 @@ export default function Navbar() {
                                             key={item.href}
                                             href={item.href}
                                             className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
-                                                    ? "bg-slate-800 text-emerald-400"
-                                                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                                                ? "bg-slate-800 text-emerald-400"
+                                                : "text-slate-300 hover:bg-slate-800 hover:text-white"
                                                 }`}
                                         >
                                             {item.icon}
@@ -159,8 +165,8 @@ export default function Navbar() {
                                     href={item.href}
                                     onClick={() => setIsOpen(false)}
                                     className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${isActive
-                                            ? "bg-slate-800 text-emerald-400"
-                                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                                        ? "bg-slate-800 text-emerald-400"
+                                        : "text-slate-300 hover:bg-slate-800 hover:text-white"
                                         }`}
                                 >
                                     {item.icon}

@@ -120,7 +120,7 @@ O **Gastor** foi desenhado com o **FTMO Challenge** em mente. O sistema verifica
 
 ---
 
-## 📱 As 8 Abas da Interface
+## 📱 As 9 Abas da Interface
 
 ```mermaid
 graph LR
@@ -128,17 +128,18 @@ graph LR
     B --> C["🧪 Laboratório"]
     C --> D["⚙️ Otimizador"]
     D --> E["🛠️ Construtor"]
-    E --> F["📚 Glossário"]
-    F --> G["⚙️ Config"]
+    E --> F["🎮 Paper Trading"]
+    F --> G["📚 Glossário"]
+    G --> H["⚙️ Config"]
     
     style A fill:#10b981,stroke:#059669,color:#fff
     style B fill:#f59e0b,stroke:#d97706,color:#fff
     style C fill:#8b5cf6,stroke:#7c3aed,color:#fff
     style D fill:#3b82f6,stroke:#2563eb,color:#fff
     style E fill:#ec4899,stroke:#db2777,color:#fff
-    style F fill:#14b8a6,stroke:#0d9488,color:#fff
-    style G fill:#6366f1,stroke:#4f46e5,color:#fff
-    style H fill:#64748b,stroke:#475569,color:#fff
+    style F fill:#22c55e,stroke:#16a34a,color:#fff
+    style G fill:#14b8a6,stroke:#0d9488,color:#fff
+    style H fill:#6366f1,stroke:#4f46e5,color:#fff
 ```
 
 ---
@@ -309,6 +310,40 @@ Personalize as taxas de trading usadas nos backtests:
 
 ---
 
+### 8. 🎮 Paper Trading (Simulação ao Vivo)
+
+Teste suas estratégias com preços reais da Binance sem arriscar dinheiro:
+
+| Funcionalidade | Descrição |
+|----------------|-----------|
+| **Múltiplas Sessões** | Rode várias estratégias simultaneamente |
+| **Preços ao Vivo** | WebSocket conectado à Binance em tempo real |
+| **Depósitos/Saques** | Simule aportes e retiradas virtuais |
+| **Notificações Telegram** | Receba alertas de trades no celular |
+| **Reset a Qualquer Momento** | Recomece a simulação do zero |
+
+**Como usar:**
+
+1. Vá para a aba "Paper Trading"
+2. Selecione uma estratégia (pré-pronta ou custom)
+3. Opcionalmente configure seu Chat ID do Telegram
+4. Clique em "Iniciar" e acompanhe a execução
+
+**Configurando Telegram (Opcional):**
+
+```bash
+# 1. Crie um bot no @BotFather
+# 2. Copie o token e adicione ao .env:
+TELEGRAM_BOT_TOKEN=seu_token_aqui
+
+# 3. Obtenha seu Chat ID via @userinfobot
+# 4. Cole o Chat ID ao iniciar a sessão
+```
+
+> 🎮 **Nota:** O Paper Trading simula ordens - nenhum dinheiro real é envolvido. Perfeito para validar estratégias antes de operar de verdade.
+
+---
+
 ## 🏗️ Arquitetura
 
 ```
@@ -468,7 +503,9 @@ O Backend opera com política de **Tolerância Zero** para configurações padr�
 
 O desenvolvimento do Gastor é contínuo. As próximas etapas planejadas são:
 
-- [ ] **Live Trading**: Execução automática de estratégias em conta real/demo via API Binance.
+- [x] **Paper Trading**: Simulação de trades com preços ao vivo da Binance. ✅
+- [ ] **Live Trading Real**: Execução automática em conta real via API Binance.
+- [ ] **Stop-Loss Automático**: Gestão de risco integrada nas sessões.
 - [ ] **Machine Learning Avançado**: Integração com modelos Deep Learning (LSTMs).
 - [ ] **Gestão de Portfólio**: Otimização de alocação entre múltiplas estratégias simultâneas.
 

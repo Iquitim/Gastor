@@ -235,6 +235,84 @@ export const api = {
         ),
 
     getGlossaryTerm: (slug: string) => fetchAPI<unknown>(`/api/glossary/${slug}`),
+
+    // ========================================
+    // Live Trading (Paper Trading)
+    // ========================================
+
+    // Get all sessions
+    getLiveSessions: (status?: string) =>
+        fetchAPI<unknown[]>(`/api/live/sessions${status ? `?status=${status}` : ""}`),
+
+    // Get single session details
+    getLiveSession: (sessionId: number) =>
+        fetchAPI<unknown>(`/api/live/sessions/${sessionId}`),
+
+    // Start a new session
+    startLiveSession: (options: {
+        strategy_slug: string;
+        strategy_params?: Record<string, unknown>;
+        coin: string;
+        timeframe: string;
+        initial_balance: number;
+        telegram_chat_id?: string;
+    }) =>
+        fetchAPI<{ message: string; session_id: number }>("/api/live/start", {
+            method: "POST",
+            body: JSON.stringify(options),
+        }),
+
+    // Stop a session
+    stopLiveSession: (sessionId: number) =>
+        fetchAPI<{ message: string; final_balance: number; pnl: number }>(`/api/live/stop/${sessionId}`, {
+            method: "POST",
+        }),
+
+    // Reset a session
+    resetLiveSession: (sessionId: number) =>
+        fetchAPI<{ message: string; new_balance: number }>(`/api/live/sessions/${sessionId}/reset`, {
+            method: "POST",
+        }),
+
+    // Delete a session
+    deleteLiveSession: (sessionId: number) =>
+        fetchAPI<{ message: string }>(`/api/live/sessions/${sessionId}`, {
+            method: "DELETE",
+        }),
+
+    // Deposit to session
+    depositLiveSession: (sessionId: number, amount: number, note?: string) =>
+        fetchAPI<{ message: string; balance_after: number }>(`/api/live/sessions/${sessionId}/deposit`, {
+            method: "POST",
+            body: JSON.stringify({ amount, note }),
+        }),
+
+    // Withdraw from session
+    withdrawLiveSession: (sessionId: number, amount: number, note?: string) =>
+        fetchAPI<{ message: string; balance_after: number }>(`/api/live/sessions/${sessionId}/withdraw`, {
+            method: "POST",
+            body: JSON.stringify({ amount, note }),
+        }),
+
+    // Get global status
+    getLiveStatus: () =>
+        fetchAPI<{
+            active_sessions_count: number;
+            active_streams_count: number;
+            telegram_configured: boolean;
+            sessions: unknown[];
+            streams: unknown[];
+        }>("/api/live/status"),
+
+    // Get aggregated stats
+    getLiveStats: () =>
+        fetchAPI<{
+            total_sessions: number;
+            active_sessions: number;
+            total_trades: number;
+            total_pnl: number;
+            win_rate: number;
+        }>("/api/live/stats"),
 };
 
 export default api;
