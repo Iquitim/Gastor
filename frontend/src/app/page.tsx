@@ -27,6 +27,9 @@ const DATA_SOURCES = [
 const DAYS_OPTIONS = [30, 60, 90, 120, 180, 365];
 
 const TIMEFRAMES = [
+  { value: "1m", label: "1 minuto" },
+  { value: "5m", label: "5 minutos" },
+  { value: "15m", label: "15 minutos" },
   { value: "1h", label: "1 hora" },
   { value: "4h", label: "4 horas" },
   { value: "1d", label: "1 dia" },

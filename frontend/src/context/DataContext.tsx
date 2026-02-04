@@ -74,6 +74,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         // Limpar persistência no backend
         api.clearMarketContext().catch(console.error);
         api.clearActiveStrategy().catch(console.error);
+
+        // Limpar Paper Trading (Reset Global)
+        api.deleteAllLiveSessions().catch(console.error);
     };
 
     return (

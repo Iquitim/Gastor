@@ -115,6 +115,14 @@ class PaperPosition(Base):
     current_price = Column(Float)
     unrealized_pnl = Column(Float)
     
+    # Status da posição
+    status = Column(String, default="OPEN")  # "OPEN" ou "CLOSED"
+    
+    # Dados de saída (preenchidos ao fechar)
+    exit_price = Column(Float, nullable=True)
+    exit_at = Column(DateTime(timezone=True), nullable=True)
+    realized_pnl = Column(Float, nullable=True)
+    
     opened_at = Column(DateTime(timezone=True), server_default=func.now())
 
 

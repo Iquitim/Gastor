@@ -1,9 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useData } from "../../context/DataContext";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import api from "../../lib/api";
-import NoDataBanner from "../../components/NoDataBanner";
 import { getStoredSettings } from "../../lib/settings";
 
 // Types
@@ -15,6 +13,7 @@ interface Session {
     timeframe: string;
     initial_balance: number;
     current_balance: number;
+    equity?: number;  // Cash + Position Value
     pnl: number;
     pnl_pct: number;
     total_trades: number;
@@ -53,7 +52,28 @@ interface SessionDetails {
         completed_trades: number;
         total_pnl: number;
         win_rate: number;
+        position_amount?: number;
     };
+    triggers: {
+        status: string;
+        message?: string;
+        current_price?: number;
+        has_position?: boolean;
+        buy_rules: Array<{
+            indicator: string;
+            current: number;
+            operator: string;
+            threshold: number | string;
+            active: boolean;
+        }>;
+        sell_rules: Array<{
+            indicator: string;
+            current: number;
+            operator: string;
+            threshold: number | string;
+            active: boolean;
+        }>;
+    } | null;
     recent_trades: Array<{
         id: number;
         side: string;
@@ -75,7 +95,15 @@ interface SessionDetails {
         note: string | null;
         created_at: string | null;
     }>;
+    price_history: Array<{
+        time: number;
+        open: number;
+        high: number;
+        low: number;
+        close: number;
+    }>;
 }
+
 
 interface Strategy {
     slug: string;
@@ -84,19 +112,129 @@ interface Strategy {
     category: string;
 }
 
+// --- Interactive Chart Component ---
+interface InteractiveChartProps {
+    data: { time: number; open: number; high: number; low: number; close: number }[];
+}
+
+const InteractiveChart: React.FC<InteractiveChartProps> = ({ data }) => {
+    const [hoveredCandle, setHoveredCandle] = useState<any>(null);
+
+    const { width, height, minPrice, maxPrice, range, adjMin, adjRange, candleWidth, gap, scaleY } = useMemo(() => {
+        const width = 600;
+        const height = 200;
+        const allPrices = data.flatMap(d => [d.high, d.low]);
+        const minPrice = Math.min(...allPrices);
+        const maxPrice = Math.max(...allPrices);
+        const range = maxPrice - minPrice || 1;
+        const padding = range * 0.1;
+        const adjMin = minPrice - padding;
+        const adjRange = range + padding * 2;
+        const candleWidth = Math.max(3, (width / data.length) * 0.7);
+        const gap = (width / data.length) * 0.15;
+        const scaleY = (price: number) => height - ((price - adjMin) / adjRange) * height;
+
+        return { width, height, minPrice, maxPrice, range, adjMin, adjRange, candleWidth, gap, scaleY };
+    }, [data]);
+
+    const displayCandle = hoveredCandle || data[data.length - 1];
+
+    if (!data || data.length === 0) return null;
+
+    return (
+        <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 mt-4">
+            {/* Header: OHLC Stats */}
+            <div className="flex justify-between items-center mb-4 text-xs font-mono">
+                <div className="flex flex-wrap gap-4 md:gap-6">
+                    <span className="text-gray-400">Abertura: <span className={displayCandle.open > displayCandle.close ? "text-red-400" : "text-green-400"}>{displayCandle.open.toFixed(2)}</span></span>
+                    <span className="text-gray-400">Máxima: <span className="text-gray-200">{displayCandle.high.toFixed(2)}</span></span>
+                    <span className="text-gray-400">Mínima: <span className="text-gray-200">{displayCandle.low.toFixed(2)}</span></span>
+                    <span className="text-gray-400">Fechamento: <span className={displayCandle.close >= displayCandle.open ? "text-green-400" : "text-red-400"}>{displayCandle.close.toFixed(2)}</span></span>
+                </div>
+                <div className="text-gray-500 whitespace-nowrap ml-4">
+                    Horário: {new Date(displayCandle.time * 1000).toLocaleTimeString()}
+                </div>
+            </div>
+
+            {/* Chart */}
+            <div className="w-full h-48 relative cursor-crosshair">
+                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" preserveAspectRatio="none">
+                    {data.map((candle, i) => {
+                        const x = (i / data.length) * width + gap;
+                        const isGreen = candle.close >= candle.open;
+                        const color = isGreen ? "#22c55e" : "#ef4444";
+                        const bodyTop = scaleY(Math.max(candle.open, candle.close));
+                        const bodyBottom = scaleY(Math.min(candle.open, candle.close));
+                        const bodyHeight = Math.max(1, bodyBottom - bodyTop);
+                        const wickX = x + candleWidth / 2;
+
+                        return (
+                            <g key={i}
+                                onMouseEnter={() => setHoveredCandle(candle)}
+                                onMouseLeave={() => setHoveredCandle(null)}
+                            >
+                                {/* Invisible Hit Area (Larger) */}
+                                <rect
+                                    x={x - gap / 2}
+                                    y={0}
+                                    width={candleWidth + gap}
+                                    height={height}
+                                    fill="transparent"
+                                />
+
+                                {/* Wick */}
+                                <line
+                                    x1={wickX}
+                                    y1={scaleY(candle.high)}
+                                    x2={wickX}
+                                    y2={scaleY(candle.low)}
+                                    stroke={color}
+                                    strokeWidth="1"
+                                    className="pointer-events-none"
+                                />
+                                {/* Body */}
+                                <rect
+                                    x={x}
+                                    y={bodyTop}
+                                    width={candleWidth}
+                                    height={bodyHeight}
+                                    fill={color}
+                                    className="pointer-events-none"
+                                />
+                            </g>
+                        );
+                    })}
+
+                    {/* Linha de Preço Atual (Dotted) */}
+                    <line
+                        x1="0"
+                        y1={scaleY(displayCandle.close)}
+                        x2={width}
+                        y2={scaleY(displayCandle.close)}
+                        stroke="#ffffff"
+                        strokeOpacity="0.2"
+                        strokeDasharray="4"
+                    />
+                </svg>
+            </div>
+        </div>
+    );
+};
+
 export default function LiveTradingPage() {
-    const { hasData, dataInfo } = useData();
 
     // State
     const [sessions, setSessions] = useState<Session[]>([]);
     const [selectedSession, setSelectedSession] = useState<SessionDetails | null>(null);
+    const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
+    const selectedSessionIdRef = useRef<number | null>(null); // Para evitar race condition
+
     const [strategies, setStrategies] = useState<Strategy[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Form state
     const [selectedStrategy, setSelectedStrategy] = useState("");
-    const [telegramChatId, setTelegramChatId] = useState("");
     const [showNewSessionForm, setShowNewSessionForm] = useState(false);
 
     // Transaction modal
@@ -106,6 +244,14 @@ export default function LiveTradingPage() {
     } | null>(null);
     const [transactionAmount, setTransactionAmount] = useState("");
     const [transactionNote, setTransactionNote] = useState("");
+
+    // Helpers
+    const handleSessionSelect = (id: number) => {
+        setSelectedSession(null); // Clear stale data immediate
+        setSelectedSessionId(id);
+        selectedSessionIdRef.current = id;
+        loadSessionDetails(id);
+    };
 
     // Load data
     const loadSessions = useCallback(async () => {
@@ -129,7 +275,11 @@ export default function LiveTradingPage() {
     const loadSessionDetails = useCallback(async (sessionId: number) => {
         try {
             const data = await api.getLiveSession(sessionId) as SessionDetails;
-            setSelectedSession(data);
+
+            // Check for race condition
+            if (selectedSessionIdRef.current === sessionId) {
+                setSelectedSession(data);
+            }
         } catch (e) {
             console.error("Failed to load session details", e);
         }
@@ -146,17 +296,21 @@ export default function LiveTradingPage() {
 
     // Refresh selected session details
     useEffect(() => {
-        if (selectedSession?.session.status === "running") {
-            const interval = setInterval(() => {
-                loadSessionDetails(selectedSession.session.id);
-            }, 3000);
-            return () => clearInterval(interval);
-        }
-    }, [selectedSession, loadSessionDetails]);
+        if (!selectedSessionId) return;
+
+        // Initial load
+        loadSessionDetails(selectedSessionId);
+
+        const interval = setInterval(() => {
+            loadSessionDetails(selectedSessionId);
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [selectedSessionId, loadSessionDetails]);
 
     // Handlers
     const handleStartSession = async () => {
-        if (!selectedStrategy || !dataInfo) {
+        if (!selectedStrategy) {
             setError("Selecione uma estratégia");
             return;
         }
@@ -169,16 +323,15 @@ export default function LiveTradingPage() {
 
             await api.startLiveSession({
                 strategy_slug: selectedStrategy,
-                coin: dataInfo.coin,
-                timeframe: dataInfo.timeframe,
-                initial_balance: settings.initialBalance,
-                telegram_chat_id: telegramChatId || undefined,
+                coin: settings.paperTradingCoin,
+                timeframe: settings.paperTradingTimeframe,
+                initial_balance: settings.paperTradingBalance,
+                telegram_chat_id: settings.telegramChatId || undefined,
             });
 
             await loadSessions();
             setShowNewSessionForm(false);
             setSelectedStrategy("");
-            setTelegramChatId("");
         } catch (e: unknown) {
             const errorMessage = e instanceof Error ? e.message : "Erro ao iniciar sessão";
             setError(errorMessage);
@@ -224,20 +377,24 @@ export default function LiveTradingPage() {
     };
 
     const handleDeleteSession = async (sessionId: number) => {
-        if (!confirm("Tem certeza? Esta ação é irreversível.")) return;
+        // Confirmação já é feita no onClick do botão, não precisa aqui
 
-        setLoading(true);
+        // Feedback imediato - remove da UI antes da API responder
+        if (selectedSession?.session.id === sessionId) {
+            setSelectedSession(null);
+            setSelectedSessionId(null);
+        }
+        setSessions(prev => prev.filter(s => s.id !== sessionId));
+
+        // Não precisa de loading pois UI já foi atualizada
         try {
             await api.deleteLiveSession(sessionId);
-            await loadSessions();
-            if (selectedSession?.session.id === sessionId) {
-                setSelectedSession(null);
-            }
+            // Não recarrega - a UI já foi atualizada otimisticamente
         } catch (e: unknown) {
             const errorMessage = e instanceof Error ? e.message : "Erro ao deletar sessão";
             setError(errorMessage);
-        } finally {
-            setLoading(false);
+            // Recarrega apenas em caso de erro para restaurar estado correto
+            await loadSessions();
         }
     };
 
@@ -294,9 +451,7 @@ export default function LiveTradingPage() {
         return "text-gray-400";
     };
 
-    if (!hasData) {
-        return <NoDataBanner pageName="Paper Trading" />;
-    }
+
 
     return (
         <div className="min-h-screen bg-gray-950 p-6">
@@ -334,7 +489,7 @@ export default function LiveTradingPage() {
 
                     <div className="grid md:grid-cols-2 gap-4">
                         {/* Strategy */}
-                        <div>
+                        <div className="md:col-span-2">
                             <label className="block text-gray-400 text-sm mb-2">Estratégia</label>
                             <select
                                 value={selectedStrategy}
@@ -349,28 +504,34 @@ export default function LiveTradingPage() {
                                 ))}
                             </select>
                         </div>
-
-                        {/* Telegram */}
-                        <div>
-                            <label className="block text-gray-400 text-sm mb-2">
-                                Telegram Chat ID <span className="text-gray-500">(opcional)</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={telegramChatId}
-                                onChange={(e) => setTelegramChatId(e.target.value)}
-                                placeholder="Ex: 123456789"
-                                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white"
-                            />
-                        </div>
                     </div>
 
                     <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
                         <p className="text-blue-400 text-sm">
-                            📍 Par: <strong>{dataInfo?.coin}</strong> | Timeframe: <strong>{dataInfo?.timeframe}</strong>
+                            📍 Configurações carregadas de Settings:
                         </p>
-                        <p className="text-blue-300 text-xs mt-1">
-                            Saldo inicial será carregado das configurações (Settings)
+                        <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                            <div>
+                                <span className="text-gray-400">Par:</span>{" "}
+                                <strong className="text-white">{getStoredSettings().paperTradingCoin}</strong>
+                            </div>
+                            <div>
+                                <span className="text-gray-400">Timeframe:</span>{" "}
+                                <strong className="text-white">{getStoredSettings().paperTradingTimeframe}</strong>
+                            </div>
+                            <div>
+                                <span className="text-gray-400">Saldo:</span>{" "}
+                                <strong className="text-white">${getStoredSettings().paperTradingBalance.toLocaleString()}</strong>
+                            </div>
+                            <div>
+                                <span className="text-gray-400">Telegram:</span>{" "}
+                                <strong className={getStoredSettings().telegramChatId ? "text-green-400" : "text-gray-500"}>
+                                    {getStoredSettings().telegramChatId ? "✓ Configurado" : "Não configurado"}
+                                </strong>
+                            </div>
+                        </div>
+                        <p className="text-blue-300 text-xs mt-2">
+                            <a href="/settings" className="underline hover:text-blue-200">Alterar configurações →</a>
                         </p>
                     </div>
 
@@ -409,8 +570,8 @@ export default function LiveTradingPage() {
                                 {sessions.map((session) => (
                                     <div
                                         key={session.id}
-                                        onClick={() => loadSessionDetails(session.id)}
-                                        className={`p-4 rounded-lg cursor-pointer transition-all ${selectedSession?.session.id === session.id
+                                        onClick={() => handleSessionSelect(session.id)}
+                                        className={`p-4 rounded-lg cursor-pointer transition-all ${selectedSessionId === session.id
                                             ? "bg-gray-700 border border-blue-500"
                                             : "bg-gray-900/50 border border-gray-700 hover:border-gray-600"
                                             }`}
@@ -434,7 +595,11 @@ export default function LiveTradingPage() {
 
                                         <div className="flex justify-between items-center mt-3">
                                             <span className="text-gray-400 text-sm">
-                                                {formatCurrency(session.current_balance)}
+                                                {/* Mostrar Equity se tiver posição, senão saldo */}
+                                                {session.has_position
+                                                    ? <span title="Patrimônio (inclui posição)">{formatCurrency(session.equity || session.current_balance)} 📊</span>
+                                                    : formatCurrency(session.current_balance)
+                                                }
                                             </span>
                                             <span className={`font-medium ${getPnLColor(session.pnl)}`}>
                                                 {session.pnl >= 0 ? "+" : ""}
@@ -473,35 +638,47 @@ export default function LiveTradingPage() {
                                     </div>
 
                                     <div className="flex gap-2">
-                                        {selectedSession.session.status === "running" ? (
+                                        {selectedSession.session.status === "running" && (
                                             <button
                                                 onClick={() => handleStopSession(selectedSession.session.id)}
                                                 disabled={loading}
-                                                className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-sm rounded-lg"
+                                                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-sm rounded-lg"
                                             >
-                                                ⏹️ Parar
-                                            </button>
-                                        ) : (
-                                            <button
-                                                onClick={() => handleDeleteSession(selectedSession.session.id)}
-                                                disabled={loading}
-                                                className="px-3 py-1.5 bg-red-900 hover:bg-red-800 text-white text-sm rounded-lg"
-                                            >
-                                                🗑️ Deletar
+                                                Parar
                                             </button>
                                         )}
                                         <button
+                                            onClick={() => {
+                                                if (selectedSession.session.status === "running") {
+                                                    if (confirm("A sessão está rodando. Deseja parar e depois deletar?")) {
+                                                        handleStopSession(selectedSession.session.id).then(() => {
+                                                            // Timeout mínimo para garantir que o stop foi processado
+                                                            setTimeout(() => handleDeleteSession(selectedSession.session.id), 100);
+                                                        });
+                                                    }
+                                                } else {
+                                                    if (confirm("Tem certeza que deseja deletar esta sessão?")) {
+                                                        handleDeleteSession(selectedSession.session.id);
+                                                    }
+                                                }
+                                            }}
+                                            disabled={loading}
+                                            className="px-3 py-1.5 bg-red-700 hover:bg-red-600 text-white text-sm rounded-lg"
+                                        >
+                                            Deletar
+                                        </button>
+                                        <button
                                             onClick={() => handleResetSession(selectedSession.session.id)}
                                             disabled={loading}
-                                            className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white text-sm rounded-lg"
+                                            className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded-lg"
                                         >
-                                            🔄 Reset
+                                            Reset
                                         </button>
                                     </div>
                                 </div>
 
                                 {/* Balance Cards */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                                     <div className="bg-black/30 rounded-lg p-3">
                                         <p className="text-gray-400 text-xs">Saldo Inicial</p>
                                         <p className="text-lg font-bold text-white">
@@ -509,25 +686,141 @@ export default function LiveTradingPage() {
                                         </p>
                                     </div>
                                     <div className="bg-black/30 rounded-lg p-3">
-                                        <p className="text-gray-400 text-xs">Saldo Atual</p>
+                                        <p className="text-gray-400 text-xs">Saldo Disponível</p>
                                         <p className="text-lg font-bold text-white">
                                             {formatCurrency(selectedSession.session.current_balance)}
                                         </p>
                                     </div>
                                     <div className="bg-black/30 rounded-lg p-3">
-                                        <p className="text-gray-400 text-xs">PnL Total</p>
-                                        <p className={`text-lg font-bold ${getPnLColor(selectedSession.session.pnl)}`}>
-                                            {selectedSession.session.pnl >= 0 ? "+" : ""}
-                                            {formatCurrency(selectedSession.session.pnl)} ({selectedSession.session.pnl_pct.toFixed(2)}%)
+                                        <p className="text-gray-400 text-xs">Posição</p>
+                                        <p className="text-lg font-bold text-white">
+                                            {selectedSession.metrics.position_amount ? selectedSession.metrics.position_amount.toFixed(4) : (selectedSession.position?.quantity?.toFixed(4) || "0.0000")} <span className="text-xs text-gray-500">{selectedSession.session.coin}</span>
                                         </p>
                                     </div>
+
+                                    {/* Calculated Equity Card */}
                                     <div className="bg-black/30 rounded-lg p-3">
-                                        <p className="text-gray-400 text-xs">Win Rate</p>
+                                        <p className="text-gray-400 text-xs">Patrimônio (Equity)</p>
                                         <p className="text-lg font-bold text-white">
-                                            {selectedSession.metrics.win_rate.toFixed(1)}%
+                                            {/* Equity = Cash + PositionValue */}
+                                            {(() => {
+                                                const cash = selectedSession.session.current_balance;
+                                                const qty = selectedSession.position?.quantity || 0;
+                                                const currentPrice = selectedSession.triggers?.current_price || (selectedSession.position?.current_price || 0);
+                                                const equity = cash + (qty * currentPrice);
+                                                return formatCurrency(equity);
+                                            })()}
                                         </p>
+                                    </div>
+
+                                    {/* Global PnL Card */}
+                                    <div className="bg-black/30 rounded-lg p-3">
+                                        <p className="text-gray-400 text-xs">PnL Global</p>
+                                        {(() => {
+                                            const cash = selectedSession.session.current_balance;
+                                            const qty = selectedSession.position?.quantity || 0;
+                                            const currentPrice = selectedSession.triggers?.current_price || (selectedSession.position?.current_price || 0);
+                                            const equity = cash + (qty * currentPrice);
+                                            const initial = selectedSession.session.initial_balance;
+                                            const pnl = equity - initial;
+                                            const pnlPct = (pnl / initial) * 100;
+
+                                            return (
+                                                <p className={`text-lg font-bold ${getPnLColor(pnl)}`}>
+                                                    {pnl >= 0 ? "+" : ""}
+                                                    {formatCurrency(pnl)} ({pnlPct.toFixed(2)}%)
+                                                </p>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
+
+                                {/* Triggers Panel */}
+                                {selectedSession.triggers && (
+                                    <div className="mt-4 bg-purple-900/20 border border-purple-500/30 rounded-xl p-4">
+                                        <h3 className="text-purple-400 font-semibold mb-3 flex items-center gap-2">
+                                            Gatilhos da Estratégia
+                                            {selectedSession.triggers.status === "collecting" && (
+                                                <span className="text-xs text-gray-400 font-normal">
+                                                    ({selectedSession.triggers.message})
+                                                </span>
+                                            )}
+                                        </h3>
+
+                                        {selectedSession.triggers.status === "ready" && (
+                                            <div className="grid md:grid-cols-2 gap-4">
+                                                {/* Buy Triggers */}
+                                                <div className="space-y-2">
+                                                    <p className="text-green-400 text-sm font-medium">Compra</p>
+                                                    {selectedSession.triggers.buy_rules.length === 0 ? (
+                                                        <p className="text-gray-500 text-xs">Nenhuma regra</p>
+                                                    ) : (
+                                                        selectedSession.triggers.buy_rules.map((rule, idx) => (
+                                                            <div
+                                                                key={idx}
+                                                                className={`p-2 rounded-lg border text-xs ${rule.active
+                                                                    ? "bg-green-900/40 border-green-500/50"
+                                                                    : "bg-gray-800/50 border-gray-700"
+                                                                    }`}
+                                                            >
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-gray-300">{rule.indicator}</span>
+                                                                    <span className={rule.active ? "text-green-400 font-bold" : "text-gray-400"}>
+                                                                        {rule.active ? "✓ ATIVO" : "Aguardando"}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="mt-1 flex justify-between text-gray-400">
+                                                                    <span>Atual: <strong className="text-white">{rule.current}</strong></span>
+                                                                    <span>{rule.operator} {rule.threshold}</span>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                </div>
+
+                                                {/* Sell Triggers */}
+                                                <div className="space-y-2">
+                                                    <p className="text-red-400 text-sm font-medium">Venda</p>
+                                                    {selectedSession.triggers.sell_rules.length === 0 ? (
+                                                        <p className="text-gray-500 text-xs">Nenhuma regra</p>
+                                                    ) : (
+                                                        selectedSession.triggers.sell_rules.map((rule, idx) => (
+                                                            <div
+                                                                key={idx}
+                                                                className={`p-2 rounded-lg border text-xs ${rule.active
+                                                                    ? "bg-red-900/40 border-red-500/50"
+                                                                    : "bg-gray-800/50 border-gray-700"
+                                                                    }`}
+                                                            >
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-gray-300">{rule.indicator}</span>
+                                                                    <span className={rule.active ? "text-red-400 font-bold" : "text-gray-400"}>
+                                                                        {rule.active ? "✓ ATIVO" : "Aguardando"}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="mt-1 flex justify-between text-gray-400">
+                                                                    <span>Atual: <strong className="text-white">{rule.current}</strong></span>
+                                                                    <span>{rule.operator} {rule.threshold}</span>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {selectedSession.triggers.current_price && (
+                                            <p className="mt-3 text-center text-gray-400 text-xs">
+                                                Preço atual: <strong className="text-white">${selectedSession.triggers.current_price}</strong>
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Candlestick Chart */}
+                                {selectedSession.price_history && selectedSession.price_history.length > 1 && (
+                                    <InteractiveChart data={selectedSession.price_history} />
+                                )}
 
                                 {/* Deposit/Withdraw Buttons */}
                                 <div className="flex gap-3 mt-4">
@@ -537,7 +830,7 @@ export default function LiveTradingPage() {
                                         }
                                         className="flex-1 px-4 py-2 bg-green-900/50 hover:bg-green-900/70 border border-green-500/30 text-green-400 rounded-lg"
                                     >
-                                        💰 Depositar
+                                        Depositar
                                     </button>
                                     <button
                                         onClick={() =>
@@ -545,7 +838,7 @@ export default function LiveTradingPage() {
                                         }
                                         className="flex-1 px-4 py-2 bg-red-900/50 hover:bg-red-900/70 border border-red-500/30 text-red-400 rounded-lg"
                                     >
-                                        🏦 Sacar
+                                        Sacar
                                     </button>
                                 </div>
                             </div>
@@ -553,7 +846,7 @@ export default function LiveTradingPage() {
                             {/* Position */}
                             {selectedSession.position && (
                                 <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4">
-                                    <h3 className="text-blue-400 font-semibold mb-3">📊 Posição Aberta</h3>
+                                    <h3 className="text-blue-400 font-semibold mb-3">Posição Aberta</h3>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         <div>
                                             <p className="text-gray-400 text-xs">Lado</p>
@@ -600,6 +893,7 @@ export default function LiveTradingPage() {
                                                     <th className="text-right py-2">Preço</th>
                                                     <th className="text-right py-2">Qtd</th>
                                                     <th className="text-right py-2">Valor</th>
+                                                    <th className="text-right py-2">Taxas</th>
                                                     <th className="text-right py-2">PnL</th>
                                                     <th className="text-right py-2">Data</th>
                                                 </tr>
@@ -623,6 +917,9 @@ export default function LiveTradingPage() {
                                                         </td>
                                                         <td className="text-right text-gray-300">
                                                             {formatCurrency(trade.value)}
+                                                        </td>
+                                                        <td className="text-right text-amber-500/80">
+                                                            {formatCurrency(trade.fee || 0)}
                                                         </td>
                                                         <td className="text-right">
                                                             {trade.pnl !== null ? (

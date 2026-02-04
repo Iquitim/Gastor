@@ -280,6 +280,12 @@ export const api = {
             method: "DELETE",
         }),
 
+    // Delete ALL sessions
+    deleteAllLiveSessions: () =>
+        fetchAPI<{ message: string }>("/api/live/sessions", {
+            method: "DELETE",
+        }),
+
     // Deposit to session
     depositLiveSession: (sessionId: number, amount: number, note?: string) =>
         fetchAPI<{ message: string; balance_after: number }>(`/api/live/sessions/${sessionId}/deposit`, {

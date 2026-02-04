@@ -17,12 +17,21 @@ const DEFAULT_COINS: Record<string, CoinConfig> = {
     "DOGE/USDT": { enabled: false, fee: 0.10, slippage: 0.20 },
 };
 
+const AVAILABLE_COINS = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "AVAX/USDT", "DOGE/USDT"];
+const AVAILABLE_TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"];
+
 export default function SettingsPage() {
     const [coins, setCoins] = useState(DEFAULT_COINS);
     const [initialBalance, setInitialBalance] = useState(10000);
     const [positionSize, setPositionSize] = useState(100);
     const [useCompound, setUseCompound] = useState(true);
     const [saved, setSaved] = useState(false);
+
+    // Paper Trading Settings
+    const [paperTradingBalance, setPaperTradingBalance] = useState(10000);
+    const [paperTradingCoin, setPaperTradingCoin] = useState("SOL/USDT");
+    const [paperTradingTimeframe, setPaperTradingTimeframe] = useState("1h");
+    const [telegramChatId, setTelegramChatId] = useState("");
 
     useEffect(() => {
         const saved = localStorage.getItem("gastor_settings");
@@ -33,6 +42,11 @@ export default function SettingsPage() {
                 if (parsed.initialBalance) setInitialBalance(parsed.initialBalance);
                 if (parsed.positionSize) setPositionSize(parsed.positionSize);
                 if (parsed.useCompound !== undefined) setUseCompound(parsed.useCompound);
+                // Paper Trading
+                if (parsed.paperTradingBalance) setPaperTradingBalance(parsed.paperTradingBalance);
+                if (parsed.paperTradingCoin) setPaperTradingCoin(parsed.paperTradingCoin);
+                if (parsed.paperTradingTimeframe) setPaperTradingTimeframe(parsed.paperTradingTimeframe);
+                if (parsed.telegramChatId !== undefined) setTelegramChatId(parsed.telegramChatId);
             } catch (e) {
                 console.error("Erro ao carregar configurações", e);
             }
@@ -53,6 +67,11 @@ export default function SettingsPage() {
             setInitialBalance(10000);
             setPositionSize(100);
             setUseCompound(true);
+            // Paper Trading
+            setPaperTradingBalance(10000);
+            setPaperTradingCoin("SOL/USDT");
+            setPaperTradingTimeframe("1h");
+            setTelegramChatId("");
             localStorage.removeItem("gastor_settings");
             setSaved(false);
         }
@@ -63,7 +82,12 @@ export default function SettingsPage() {
             coins,
             initialBalance,
             positionSize,
-            useCompound
+            useCompound,
+            // Paper Trading
+            paperTradingBalance,
+            paperTradingCoin,
+            paperTradingTimeframe,
+            telegramChatId
         };
         localStorage.setItem("gastor_settings", JSON.stringify(settings));
         setSaved(true);
@@ -189,6 +213,81 @@ export default function SettingsPage() {
                 <p className="text-xs text-slate-500 mt-4">
                     A taxa total é cobrada em cada operação (compra e venda). Um trade completo tem custo de 2× a taxa total.
                 </p>
+            </div>
+
+            {/* Paper Trading Settings */}
+            <div className="bg-slate-900 rounded-lg border border-slate-800 p-6 mb-6">
+                <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    🎮 Paper Trading
+                </h2>
+                <p className="text-slate-400 text-sm mb-4">
+                    Configurações para simulação de trading com preços ao vivo
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {/* Telegram Chat ID */}
+                    <div className="sm:col-span-2">
+                        <label className="block text-sm text-slate-400 mb-1">
+                            Telegram Chat ID <span className="text-slate-500">(opcional)</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={telegramChatId}
+                            onChange={(e) => setTelegramChatId(e.target.value)}
+                            placeholder="Ex: 123456789"
+                            className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-white"
+                        />
+                        <p className="text-xs text-slate-500 mt-1">
+                            Obtenha seu Chat ID com <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">@userinfobot</a> no Telegram
+                        </p>
+                    </div>
+
+                    {/* Paper Trading Balance */}
+                    <div>
+                        <label className="block text-sm text-slate-400 mb-1">
+                            Saldo Inicial ($)
+                        </label>
+                        <input
+                            type="number"
+                            value={paperTradingBalance}
+                            onChange={(e) => setPaperTradingBalance(Number(e.target.value))}
+                            min={100}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-white"
+                        />
+                    </div>
+
+                    {/* Paper Trading Coin */}
+                    <div>
+                        <label className="block text-sm text-slate-400 mb-1">
+                            Moeda Padrão
+                        </label>
+                        <select
+                            value={paperTradingCoin}
+                            onChange={(e) => setPaperTradingCoin(e.target.value)}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-white"
+                        >
+                            {AVAILABLE_COINS.map((coin) => (
+                                <option key={coin} value={coin}>{coin}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Paper Trading Timeframe */}
+                    <div>
+                        <label className="block text-sm text-slate-400 mb-1">
+                            Timeframe Padrão
+                        </label>
+                        <select
+                            value={paperTradingTimeframe}
+                            onChange={(e) => setPaperTradingTimeframe(e.target.value)}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-md px-3 py-2 text-white"
+                        >
+                            {AVAILABLE_TIMEFRAMES.map((tf) => (
+                                <option key={tf} value={tf}>{tf}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
             </div>
 
             {/* Save Button */}

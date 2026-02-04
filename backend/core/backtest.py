@@ -111,9 +111,9 @@ class BacktestEngine:
 
     def _strategy_golden_cross(self, params: Dict[str, Any]):
         """
-        Estratégia Golden Cross:
-        - Compra: EMA rápida cruza ACIMA da lenta
-        - Venda: EMA rápida cruza ABAIXO da lenta
+        Estratégia Golden Cross (Trend Following):
+        - Compra: EMA rápida > EMA lenta
+        - Venda: EMA rápida < EMA lenta
         """
         fast = int(params.get("fast", 9))
         slow = int(params.get("slow", 21))
@@ -121,21 +121,23 @@ class BacktestEngine:
         self.df['ema_fast'] = calc_ema(self.df['close'], fast)
         self.df['ema_slow'] = calc_ema(self.df['close'], slow)
         
-        buy_signal = (self.df['ema_fast'] > self.df['ema_slow']) & (self.df['ema_fast'].shift(1) <= self.df['ema_slow'].shift(1))
-        sell_signal = (self.df['ema_fast'] < self.df['ema_slow']) & (self.df['ema_fast'].shift(1) >= self.df['ema_slow'].shift(1))
+        # Usar lógica de ESTADO (Level) em vez de evento (Open Position se estiver favorável)
+        buy_signal = self.df['ema_fast'] > self.df['ema_slow']
+        sell_signal = self.df['ema_fast'] < self.df['ema_slow']
         
         self._simulate_trades(buy_signal, sell_signal)
 
     def _strategy_macd_crossover(self, params: Dict[str, Any]):
         """
-        Estratégia MACD:
-        - Compra: MACD cruza acima do Signal
-        - Venda: MACD cruza abaixo do Signal
+        Estratégia MACD (Trend Following):
+        - Compra: MACD > Signal
+        - Venda: MACD < Signal
         """
         macd, signal = calc_macd(self.df['close'])
         
-        buy_signal = (macd > signal) & (macd.shift(1) <= signal.shift(1))
-        sell_signal = (macd < signal) & (macd.shift(1) >= signal.shift(1))
+        # Usar lógica de ESTADO para garantir execução se já estiver cruzado
+        buy_signal = macd > signal
+        sell_signal = macd < signal
         
         self._simulate_trades(buy_signal, sell_signal)
         
@@ -221,7 +223,7 @@ class BacktestEngine:
         cross_up = (ema_fast > ema_slow) & (ema_fast.shift(1) <= ema_slow.shift(1))
         cross_down = (ema_fast < ema_slow) & (ema_fast.shift(1) >= ema_slow.shift(1))
         
-        buy_signal = cross_up & (rsi > rsi_min)
+        buy_signal = (ema_fast > ema_slow) & (rsi > rsi_min)
         sell_signal = cross_down
         
         self._simulate_trades(buy_signal, sell_signal)
@@ -241,7 +243,7 @@ class BacktestEngine:
         cross_up = (macd > signal) & (macd.shift(1) <= signal.shift(1))
         cross_down = (macd < signal) & (macd.shift(1) >= signal.shift(1))
         
-        buy_signal = cross_up & (rsi > rsi_confirm)
+        buy_signal = (macd > signal) & (rsi > rsi_confirm)
         sell_signal = cross_down
         
         self._simulate_trades(buy_signal, sell_signal)

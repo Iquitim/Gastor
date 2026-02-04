@@ -58,3 +58,9 @@ async def health_check():
 async def root():
     """Root endpoint - redirect to docs."""
     return {"message": "Gastor API", "docs": "/docs"}
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Restaurar sessões de Paper Trading ativas."""
+    await live.restore_active_sessions()

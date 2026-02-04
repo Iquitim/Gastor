@@ -22,6 +22,7 @@ from core.database import get_db
 from core.models import PaperSession, PaperTrade, PaperPosition, PaperTransaction
 from core.paper_trading import PaperTradingEngine
 from core.binance_ws import get_multi_stream
+from core.data_loader import fetch_binance_klines
 from core import notifications
 
 router = APIRouter()
@@ -147,15 +148,25 @@ async def start_session(
     on_error = await create_error_callback(session)
     
     engine = PaperTradingEngine(
-        session=session,
-        db=db,
-        on_trade=on_trade,
-        on_error=on_error,
+        session_id=session.id,
+        initial_balance=session.initial_balance,
+        coin=session.coin,
+        timeframe=session.timeframe,
+        strategy_slug=request.strategy_slug,
+        strategy_params=request.strategy_params,
     )
+    engine.on_trade = on_trade
+    # engine.on_error = on_error # Not used in new class yet, but good to keep structure
+    
     active_engines[session.id] = engine
+    
+    # Carregar dados históricos
+    await engine.warmup()
     
     # Iniciar stream WebSocket
     symbol = request.coin.replace("/", "")
+    
+    # Iniciar stream WebSocket
     stream_id = f"session_{session.id}"
     
     multi_stream = get_multi_stream()
@@ -186,6 +197,36 @@ async def start_session(
         "coin": request.coin,
         "balance": request.initial_balance,
     }
+
+
+
+@router.delete("/sessions")
+async def delete_all_sessions(db: Session = Depends(get_db)):
+    """Deleta TODAS as sessões de Paper Trading, limpando trades, transações e posições."""
+    
+    # 1. Parar todos os streams
+    multi_stream = get_multi_stream()
+    active_ids = list(active_engines.keys())
+    
+    for session_id in active_ids:
+        await multi_stream.remove_stream(f"session_{session_id}")
+    
+    active_engines.clear()
+    
+    # 2. Deletar dependências (já que não temos cascade garantido)
+    try:
+        # Nuke total das tabelas de Paper Trading
+        db.query(PaperTrade).delete()
+        db.query(PaperTransaction).delete()
+        db.query(PaperPosition).delete()
+        num_sessions = db.query(PaperSession).delete()
+        
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Erro ao deletar dados: {str(e)}")
+
+    return {"message": f"Limpeza completa realizada. {num_sessions} sessões removidas."}
 
 
 @router.post("/stop/{session_id}")
@@ -269,12 +310,29 @@ async def list_sessions(
             PaperTrade.session_id == s.id
         ).count()
         
-        # Verificar posição
-        has_position = db.query(PaperPosition).filter(
-            PaperPosition.session_id == s.id
-        ).first() is not None
+        # Verificar posição aberta e calcular equity
+        position = db.query(PaperPosition).filter(
+            PaperPosition.session_id == s.id,
+            PaperPosition.status == "OPEN"
+        ).first()
         
-        pnl = s.current_balance - s.initial_balance
+        # Calcular valor da posição
+        position_value = 0.0
+        if position:
+            # Usar triggers do engine ativo para preço atual, ou current_price da posição
+            if s.id in active_engines:
+                engine = active_engines[s.id]
+                if engine.candle_history:
+                    current_price = engine.candle_history[-1]["close"]
+                else:
+                    current_price = position.current_price or position.entry_price
+            else:
+                current_price = position.current_price or position.entry_price
+            position_value = position.quantity * current_price
+        
+        # Equity = Cash + Position Value
+        equity = s.current_balance + position_value
+        pnl = equity - s.initial_balance
         
         result.append({
             "id": s.id,
@@ -284,10 +342,11 @@ async def list_sessions(
             "timeframe": s.timeframe,
             "initial_balance": s.initial_balance,
             "current_balance": s.current_balance,
+            "equity": equity,
             "pnl": pnl,
             "pnl_pct": (pnl / s.initial_balance) * 100 if s.initial_balance > 0 else 0,
             "total_trades": total_trades,
-            "has_position": has_position,
+            "has_position": position is not None,
             "started_at": s.created_at.isoformat() if s.created_at else None,
             "stopped_at": s.stopped_at.isoformat() if s.stopped_at else None,
         })
@@ -326,6 +385,30 @@ async def get_session(
     
     pnl = session.current_balance - session.initial_balance
     
+    # Buscar triggers e price history se engine ativo
+    triggers = None
+    price_history = []
+    if session_id in active_engines:
+        engine = active_engines[session_id]
+        try:
+            triggers = engine.get_triggers()
+        except Exception as e:
+            print(f"Error getting triggers: {e}")
+            triggers = {"status": "error", "message": str(e)}
+        
+        # Últimos 50 candles para gráfico (OHLC completo)
+        if engine.candle_history:
+            price_history = [
+                {
+                    "time": c["time"],
+                    "open": c["open"],
+                    "high": c["high"],
+                    "low": c["low"],
+                    "close": c["close"],
+                }
+                for c in engine.candle_history[-50:]
+            ]
+    
     return {
         "session": {
             "id": session.id,
@@ -351,6 +434,7 @@ async def get_session(
             "unrealized_pnl": position.unrealized_pnl,
             "opened_at": position.opened_at.isoformat() if position.opened_at else None,
         } if position else None,
+        "triggers": triggers,
         "metrics": {
             "total_trades": len(trades),
             "completed_trades": len(sell_trades),
@@ -384,6 +468,7 @@ async def get_session(
             }
             for tx in transactions
         ],
+        "price_history": price_history,
     }
 
 
@@ -681,3 +766,52 @@ async def delete_session(
     return {
         "message": f"Sessão {session_id} deletada com sucesso",
     }
+
+
+async def restore_active_sessions():
+    """Restaura sessões ativas após reinício do servidor."""
+    print("[Live] Restoring active sessions...")
+    try:
+        # Precisamos de uma sessão nova pois estamos fora do contexto de request
+        from core.database import SessionLocal
+        with SessionLocal() as db:
+            sessions = db.query(PaperSession).filter(PaperSession.status == "running").all()
+            print(f"[Live] Found {len(sessions)} active sessions to restore.")
+            
+            multi_stream = get_multi_stream()
+            
+            for session in sessions:
+                # Criar engine
+                print(f"[Live] Restoring session {session.id} ({session.strategy_slug})...")
+                engine = PaperTradingEngine(
+                    session_id=session.id,
+                    initial_balance=session.initial_balance,
+                    coin=session.coin,
+                    timeframe=session.timeframe,
+                    strategy_slug=session.strategy_slug,
+                    strategy_params=session.strategy_params or {},
+                )
+                
+                # Callbacks
+                engine.on_trade = await create_trade_callback(session)
+                engine.on_error = await create_error_callback(session)
+                
+                # Registrar
+                active_engines[session.id] = engine
+                
+                # Warmup
+                await engine.warmup()
+                
+                # Stream
+                symbol = session.coin.replace("/", "")
+                stream_id = f"session_{session.id}"
+                
+                await multi_stream.add_stream(
+                    stream_id=stream_id,
+                    symbol=symbol,
+                    interval=session.timeframe,
+                    on_candle=engine.on_candle,
+                    on_error=engine.on_error,
+                )
+    except Exception as e:
+        print(f"[Live] Error restoring sessions: {e}")

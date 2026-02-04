@@ -51,7 +51,7 @@ docker compose up --build
 ```
 
 Acesse:
-- **Frontend:** http://localhost:3000
+- **Frontend:** http://localhost
 - **API Docs:** http://localhost:8000/docs
 
 ### ☢️ Limpeza Total (Reset Docker)
@@ -154,6 +154,7 @@ A aba principal onde você analisa gráficos e marca trades:
 |----------------|-----------|
 | **Gráfico Candlestick** | Interativo com zoom, pan e hover |
 | **Indicadores** | EMA (9, 21), RSI (14), Bollinger (20, 2) |
+| **Timeframes** | 1m, 5m, 15m, 1h, 4h, 1d |
 | **Histórico de Trades** | Lista editável com todas as operações |
 | **Navegação Temporal** | Slider para percorrer o histórico |
 
@@ -318,9 +319,18 @@ Teste suas estratégias com preços reais da Binance sem arriscar dinheiro:
 |----------------|-----------|
 | **Múltiplas Sessões** | Rode várias estratégias simultaneamente |
 | **Preços ao Vivo** | WebSocket conectado à Binance em tempo real |
+| **Cálculo de Equity** | PnL considera saldo + valor da posição aberta |
+| **Gatilhos Visuais** | Veja em tempo real quais indicadores estão ativos |
 | **Depósitos/Saques** | Simule aportes e retiradas virtuais |
 | **Notificações Telegram** | Receba alertas de trades no celular |
-| **Reset a Qualquer Momento** | Recomece a simulação do zero |
+| **Reset/Delete Rápido** | Gerencie sessões com feedback instantâneo |
+
+**Alocação de Capital:**
+
+> 💡 O sistema utiliza **95% do saldo** para cada compra, reservando 5% para:
+> - Taxas de trading (0.1% maker/taker)
+> - Slippage em mercados voláteis
+> - Margem de segurança para múltiplos trades
 
 **Como usar:**
 
@@ -350,15 +360,21 @@ TELEGRAM_BOT_TOKEN=seu_token_aqui
 gastor/
 ├── backend/                    # API FastAPI
 │   ├── api/                    # Rotas (Endpoints)
-│   ├── core/                   # Lógica de Negócio (Backtest, Indicators)
-│   ├── strategies/             # Implementação das Estratégias
+│   ├── core/                   # Lógica de Negócio
+│   │   ├── paper_trading/      # Módulo Paper Trading
+│   │   │   ├── engine.py       # Motor de execução
+│   │   │   ├── strategies.py   # Cálculo de triggers
+│   │   │   └── signals.py      # Avaliação de sinais
+│   │   ├── indicators.py       # Indicadores técnicos
+│   │   └── backtest.py         # Motor de backtest
+│   ├── strategies/             # Estratégias pré-definidas
 │   └── main.py                 # Entry point
 │
 ├── frontend/                   # Next.js Application
 │   ├── src/
 │   │   ├── app/                # Páginas (Next.js App Router)
 │   │   ├── components/         # Componentes React
-│   │   ├── lib/                # Context e Utils
+│   │   ├── lib/                # API Client e Utils
 │   │   └── context/            # Global State
 │   └── public/                 # Assets (Imagens)
 │

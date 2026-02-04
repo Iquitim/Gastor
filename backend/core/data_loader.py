@@ -36,7 +36,7 @@ async def fetch_binance_klines(
     start_time = int((datetime.now() - timedelta(days=days)).timestamp() * 1000)
     
     # Mapear intervalo
-    interval_map = {"1h": "1h", "4h": "4h", "1d": "1d"}
+    interval_map = {"1m": "1m", "5m": "5m", "15m": "15m", "30m": "30m", "1h": "1h", "4h": "4h", "1d": "1d"}
     binance_interval = interval_map.get(interval, "1h")
     
     all_candles = []
@@ -88,7 +88,7 @@ async def fetch_binance_klines(
     if all_candles:
         last_candle_time = all_candles[-1]["time"] * 1000 # back to ms
         # Calculate theoretical close time of the last candle
-        interval_ms_map = {"1h": 3600000, "4h": 14400000, "1d": 86400000}
+        interval_ms_map = {"1m": 60000, "5m": 300000, "15m": 900000, "30m": 1800000, "1h": 3600000, "4h": 14400000, "1d": 86400000}
         duration = interval_ms_map.get(interval, 3600000) # Default 1h
         
         last_candle_close_time = last_candle_time + duration
