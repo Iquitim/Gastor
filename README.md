@@ -530,6 +530,12 @@ O Backend opera com política de **Tolerância Zero** para configurações padr�
 O desenvolvimento do Gastor é contínuo. As próximas etapas planejadas são:
 
 - [x] **Paper Trading**: Simulação de trades com preços ao vivo da Binance. ✅
+- [ ] **🔐 Sistema de Autenticação** *(Próxima Prioridade)*
+  - Login/Registro com padrões modernos de segurança (bcrypt, JWT, HTTPS)
+  - Perfis de usuário com dados isolados
+  - Armazenamento seguro de credenciais (tokens Telegram, API Binance)
+  - Estratégias personalizadas salvas por usuário
+  - Sessões de Paper Trading vinculadas ao perfil
 - [ ] **Live Trading Real**: Execução automática em conta real via API Binance.
 - [ ] **Stop-Loss Automático**: Gestão de risco integrada nas sessões.
 - [ ] **Machine Learning Avançado**: Integração com modelos Deep Learning (LSTMs).
