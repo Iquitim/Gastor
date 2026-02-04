@@ -101,3 +101,5 @@ Thumbs.db
 # Dados do Projeto (mantidos localmente)
 # =====================
 # trades.json  # Descomente para ignorar trades locais
+sql_app.db
+*.db
