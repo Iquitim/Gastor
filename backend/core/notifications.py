@@ -82,6 +82,7 @@ async def send_trade_alert(
     pnl: Optional[float] = None,
     pnl_pct: Optional[float] = None,
     session_id: Optional[int] = None,
+    strategy_name: Optional[str] = None,
 ) -> bool:
     """
     Envia alerta formatado de trade.
@@ -97,11 +98,16 @@ async def send_trade_alert(
         pnl: Lucro/prejuízo (apenas para SELL)
         pnl_pct: Percentual de lucro/prejuízo
         session_id: ID da sessão
+        strategy_name: Nome da estratégia
     """
     emoji = "🟢" if trade_type == "BUY" else "🔴"
     
-    msg = f"{emoji} <b>{trade_type}</b> {symbol}\n\n"
-    msg += f"💵 Preço: ${price:,.4f}\n"
+    msg = f"{emoji} <b>{trade_type}</b> {symbol}\n"
+    
+    if strategy_name:
+        msg += f"📈 Estratégia: {strategy_name}\n"
+    
+    msg += f"\n💵 Preço: ${price:,.4f}\n"
     msg += f"📊 Quantidade: {quantity:.6f}\n"
     msg += f"💰 Valor: ${value:,.2f}\n"
     

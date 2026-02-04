@@ -98,6 +98,7 @@ async def create_trade_callback(session: PaperSession):
                 pnl=trade.get("pnl"),
                 pnl_pct=trade.get("pnl_pct"),
                 session_id=session.id,
+                strategy_name=session.strategy_slug,
             )
     return on_trade
 
@@ -128,6 +129,9 @@ async def start_session(
     
     Permite múltiplas sessões simultâneas.
     """
+    # Usar Chat ID padrão se não especificado
+    chat_id = request.telegram_chat_id or os.getenv("TELEGRAM_DEFAULT_CHAT_ID", "")
+    
     # Criar sessão no banco
     session = PaperSession(
         strategy_slug=request.strategy_slug,
@@ -137,7 +141,7 @@ async def start_session(
         initial_balance=request.initial_balance,
         current_balance=request.initial_balance,
         status="running",
-        telegram_chat_id=request.telegram_chat_id,
+        telegram_chat_id=chat_id,
     )
     db.add(session)
     db.commit()

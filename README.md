@@ -336,19 +336,29 @@ Teste suas estratégias com preços reais da Binance sem arriscar dinheiro:
 
 1. Vá para a aba "Paper Trading"
 2. Selecione uma estratégia (pré-pronta ou custom)
-3. Opcionalmente configure seu Chat ID do Telegram
-4. Clique em "Iniciar" e acompanhe a execução
+3. Clique em "Iniciar" e acompanhe a execução
 
-**Configurando Telegram (Opcional):**
+**Configurando Telegram (Receba alertas no celular):**
 
 ```bash
-# 1. Crie um bot no @BotFather
-# 2. Copie o token e adicione ao .env:
-TELEGRAM_BOT_TOKEN=seu_token_aqui
+# 1. Crie um bot no @BotFather e copie o token
 
-# 3. Obtenha seu Chat ID via @userinfobot
-# 4. Cole o Chat ID ao iniciar a sessão
+# 2. Obtenha seu Chat ID via @userinfobot
+
+# 3. Adicione ao arquivo .env na raiz do projeto:
+TELEGRAM_BOT_TOKEN=seu_token_aqui
+TELEGRAM_DEFAULT_CHAT_ID=seu_chat_id
+
+# 4. Teste com:
+cd backend && python test_telegram.py
 ```
+
+**Notificações incluem:**
+- 🟢 Trades de compra (com estratégia, preço, quantidade)
+- 🔴 Trades de venda (com PnL realizado)
+- 🚀 Início/encerramento de sessões
+- 💰 Depósitos e saques
+- ⚠️ Erros
 
 > 🎮 **Nota:** O Paper Trading simula ordens - nenhum dinheiro real é envolvido. Perfeito para validar estratégias antes de operar de verdade.
 
