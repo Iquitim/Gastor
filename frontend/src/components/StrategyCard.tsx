@@ -1,3 +1,6 @@
+import React from 'react';
+import StrategyIcon from "./StrategyIcon";
+
 interface StrategyCardProps {
     slug: string;
     name: string;
@@ -27,6 +30,7 @@ const categoryLabels: Record<string, string> = {
 export default function StrategyCard({
     name,
     category,
+    icon,
     description,
     isSelected = false,
     onClick,
@@ -47,8 +51,11 @@ export default function StrategyCard({
         >
             <div className="flex items-start justify-between">
                 <div>
-                    <h3 className="font-semibold text-white">{name}</h3>
-                    <span className={`text-xs px-2 py-0.5 rounded-full border ${categoryColor}`}>
+                    <h3 className="font-semibold text-white flex items-center gap-2">
+                        {icon && <StrategyIcon icon={icon} className="w-5 h-5 text-gray-400" />}
+                        {name}
+                    </h3>
+                    <span className={`text-xs px-2 py-0.5 rounded-full border ${categoryColor} mt-1 inline-block`}>
                         {categoryLabel}
                     </span>
                 </div>

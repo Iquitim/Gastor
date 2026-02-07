@@ -84,9 +84,9 @@ export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
 
-    const handleReset = () => {
+    const handleReset = async () => {
         if (confirm("Tem certeza que deseja resetar todos os dados e voltar ao início?")) {
-            resetApplication();
+            resetApplication(); // Fire and forget for instant UI feedback
             router.push('/');
         }
     };
@@ -258,8 +258,8 @@ export default function Navbar() {
                         })}
                         {/* Mobile Reset */}
                         <button
-                            onClick={() => {
-                                handleReset();
+                            onClick={async () => {
+                                await handleReset();
                                 setIsOpen(false);
                             }}
                             className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-slate-800 hover:text-red-400 transition-colors"
@@ -267,6 +267,7 @@ export default function Navbar() {
                             {Icons.trash}
                             Resetar
                         </button>
+
 
                         {/* Mobile User Menu */}
                         <div className="border-t border-slate-700 pt-2 mt-2">

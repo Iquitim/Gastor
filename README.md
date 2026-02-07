@@ -583,6 +583,10 @@ O desenvolvimento do Gastor é contínuo. As próximas etapas planejadas são:
   - Persistência em background (sessões continuam rodando após logout).
   - Isolamento total de estado e dados entre usuários.
   - Logout seguro com limpeza de cache local.
+- [x] **System Reset Robusto & Instantâneo (Concluído) ✅**:
+  - **Background Processing**: Limpeza pesada (stops/deletes) movida para segundo plano.
+  - **Optimistic UI**: Feedback instantâneo para o usuário ("Fire-and-Forget").
+  - **Soft Delete**: Sessões marcadas como `deleting` somem imediatamente da lista.
 - [ ] **Polimento de UI & Fixes (Próximo Passo) 🚧**:
   - Ajustes visuais em emojis e ícones.
   - Correção de bug no ícone de "Lixeira" da barra superior.

@@ -273,51 +273,147 @@ async def start_session(
     }
 
 
+from fastapi import BackgroundTasks
+
+async def _delete_all_sessions_background(user_id: int, db: Session):
+    """
+    Background task to stop and delete all sessions for a user.
+    """
+    # NOTE: We need a new DB session if we want to be thread-safe/async-safe in background?
+    # Actually, SQLAlchemy sessions spanning requests is risky. 
+    # Better approach: Create a new session in the background task or pass the ID and let it create one?
+    # Since we are inside a route, 'db' is scoped to the request. It might be closed when response is sent.
+    # We should NOT use the dependency injected 'db' in a background task that outlives the request.
+    
+    # Correction: For this specific task, we will try to do the "stop" (async) part 
+    # and the "delete" part. The delete part needs a valid DB session.
+    # FASTAPI BackgroundTasks run *after* the response is sent.
+    # The dependency injected `db` (yielded session) is typically closed after response.
+    # So we must create a new session here.
+    
+    from ...database import SessionLocal
+    async_db = SessionLocal() # This is synchronous session used in async context? 
+    # If SessionLocal is blocking, it's fine for the background thread/task.
+    
+    try:
+        user_sessions = async_db.query(PaperSession).filter(PaperSession.user_id == user_id).all()
+        if not user_sessions:
+            return
+
+        # 1. Stop Streams (Async)
+        # We need to run inside the event loop.
+        # Check active engines
+        running_session_ids = [s.id for s in user_sessions if s.status == "running"]
+        if running_session_ids:
+            multi_stream = get_multi_stream()
+            stop_tasks = []
+            for sid in running_session_ids:
+                 stop_tasks.append(multi_stream.remove_stream(f"session_{sid}"))
+                 if sid in active_engines:
+                     del active_engines[sid]
+            
+            if stop_tasks:
+                await asyncio.gather(*stop_tasks, return_exceptions=True)
+
+        # 2. Bulk Delete (DB)
+        session_ids = [s.id for s in user_sessions]
+        if session_ids:
+            async_db.query(PaperTrade).filter(PaperTrade.session_id.in_(session_ids)).delete(synchronize_session=False)
+            async_db.query(PaperPosition).filter(PaperPosition.session_id.in_(session_ids)).delete(synchronize_session=False)
+            async_db.query(PaperTransaction).filter(PaperTransaction.session_id.in_(session_ids)).delete(synchronize_session=False)
+            async_db.query(PaperSession).filter(PaperSession.id.in_(session_ids)).delete(synchronize_session=False)
+            
+            async_db.commit()
+            print(f"Background Reset: Cleared {len(session_ids)} sessions for user {user_id}")
+
+    except Exception as e:
+        print(f"Background Reset Error: {e}")
+        async_db.rollback()
+    finally:
+        async_db.close()
+
+from fastapi import BackgroundTasks
+from core.database import SessionLocal  # Import SessionLocal for background tasks
+
+async def _delete_all_sessions_background(user_id: int):
+    """
+    Background task to stop and delete all sessions for a user.
+    Creates its own DB session to be safe.
+    """
+    print(f"Background Reset: Starting for user {user_id}")
+    async_db = SessionLocal() 
+    
+    try:
+        # Fetch all sessions including those marked as 'deleting'
+        user_sessions = async_db.query(PaperSession).filter(PaperSession.user_id == user_id).all()
+        if not user_sessions:
+            print(f"Background Reset: No sessions found for user {user_id}")
+            return
+
+        # 1. Stop Streams (Async - Memory/Websocket)
+        # Check active engines
+        # Accessing global active_engines is safe if we only read/delete. 
+        # But we must be careful about concurrency if new sessions start.
+        running_session_ids = [s.id for s in user_sessions if s.status in ["running", "deleting"]] # Handle 'deleting' too if it was running
+        
+        # We need to distinguish which were actually running to stop them correctly.
+        # But since we are deleting all, we just try to stop streams for ALL IDs found.
+        # active_engines is keyed by session_id.
+        
+        if running_session_ids:
+            multi_stream = get_multi_stream()
+            stop_tasks = []
+            for sid in running_session_ids:
+                 # Remove stream regardless of status
+                 stop_tasks.append(multi_stream.remove_stream(f"session_{sid}"))
+                 if sid in active_engines:
+                     del active_engines[sid]
+            
+            if stop_tasks:
+                await asyncio.gather(*stop_tasks, return_exceptions=True)
+
+        # 2. Bulk Delete (DB)
+        session_ids = [s.id for s in user_sessions]
+        if session_ids:
+            # Use IN clause for efficiency
+            async_db.query(PaperTrade).filter(PaperTrade.session_id.in_(session_ids)).delete(synchronize_session=False)
+            async_db.query(PaperPosition).filter(PaperPosition.session_id.in_(session_ids)).delete(synchronize_session=False)
+            async_db.query(PaperTransaction).filter(PaperTransaction.session_id.in_(session_ids)).delete(synchronize_session=False)
+            async_db.query(PaperSession).filter(PaperSession.id.in_(session_ids)).delete(synchronize_session=False)
+            
+            async_db.commit()
+            print(f"Background Reset: Cleared {len(session_ids)} sessions for user {user_id} successfully.")
+
+    except Exception as e:
+        print(f"Background Reset Error for user {user_id}: {e}")
+        async_db.rollback()
+    finally:
+        async_db.close()
+
+
 @router.delete("/sessions")
 async def delete_all_sessions(
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """
     Deleta TODAS as sessões DO USUÁRIO.
-    Não afeta sessões de outros usuários.
+    Executa em BACKGROUND para retorno IMEDIATO (Fire-and-Forget).
+    Marca status como 'deleting' imediatamente para esconder da UI.
     """
     
-    # Buscar sessões do usuário
-    user_sessions = db.query(PaperSession).filter(
+    # 1. Synchronous 'Soft Delete' / Hide
+    # Update status to 'deleting' so GET /sessions filters them out immediately
+    db.query(PaperSession).filter(
         PaperSession.user_id == current_user.id
-    ).all()
-    
-    session_ids = [s.id for s in user_sessions]
-    
-    if not session_ids:
-        return {"message": "Nenhuma sessão encontrada."}
-    
-    # 1. Parar streams e engines ativos do usuário
-    multi_stream = get_multi_stream()
-    
-    for sid in session_ids:
-        if sid in active_engines:
-            await multi_stream.remove_stream(f"session_{sid}")
-            del active_engines[sid]
-    
-    # 2. Deletar (com cuidado no DB)
-    try:
-        # Bulk delete trades/transações/posições dessas sessões
-        # SQLite não suporta DELETE com JOIN direito em algumas versões, então usando IN
-        db.query(PaperTrade).filter(PaperTrade.session_id.in_(session_ids)).delete(synchronize_session=False)
-        db.query(PaperTransaction).filter(PaperTransaction.session_id.in_(session_ids)).delete(synchronize_session=False)
-        db.query(PaperPosition).filter(PaperPosition.session_id.in_(session_ids)).delete(synchronize_session=False)
-        
-        # Deletar sessões
-        num_sessions = db.query(PaperSession).filter(PaperSession.id.in_(session_ids)).delete(synchronize_session=False)
-        
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Erro ao deletar dados: {str(e)}")
+    ).update({PaperSession.status: "deleting"}, synchronize_session=False)
+    db.commit()
 
-    return {"message": f"Limpeza completa realizada. {num_sessions} sessões removidas."}
+    # 2. Enfileira a tarefa pesada
+    background_tasks.add_task(_delete_all_sessions_background, current_user.id)
+    
+    return {"message": "Reset iniciado. Sessões ocultadas e limpeza em andamento."}
 
 
 @router.post("/stop/{session_id}")
@@ -360,7 +456,10 @@ async def list_sessions(
     """
     Lista sessões de Paper Trading DO USUÁRIO.
     """
-    query = db.query(PaperSession).filter(PaperSession.user_id == current_user.id)
+    query = db.query(PaperSession).filter(
+        PaperSession.user_id == current_user.id,
+        PaperSession.status != "deleting"  # Hide sessions being deleted in background
+    )
     
     if status:
         query = query.filter(PaperSession.status == status)

@@ -15,7 +15,7 @@ interface DataContextType {
     chartData: any[];
     setDataLoaded: (info: { coin: string; timeframe: string; period: string; candles: number }, data: any[]) => void;
     clearLocalState: () => void;
-    resetApplication: () => void;
+    resetApplication: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -75,15 +75,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setChartData([]);
     };
 
-    const resetApplication = () => {
+    const resetApplication = async () => {
+        // Optimistic Update: Limpa a UI imediatamente (sem esperar o backend)
         clearLocalState();
 
-        // Limpar persistência no backend
-        api.clearMarketContext().catch(console.error);
-        api.clearActiveStrategy().catch(console.error);
-
-        // Limpar Paper Trading (Reset Global)
-        api.deleteAllLiveSessions().catch(console.error);
+        try {
+            // Limpar persistência no backend (paralelo para velocidade)
+            await Promise.all([
+                api.clearMarketContext().catch(console.error),
+                api.clearActiveStrategy().catch(console.error),
+                // Limpar Paper Trading (Reset Global - Force Delete All)
+                api.deleteAllLiveSessions().catch(console.error)
+            ]);
+        } catch (error) {
+            console.error("Erro ao resetar aplicação:", error);
+            // Nota: Se falhar no server, o estado local já foi limpo. 
+            // Em um app real, talvez quiséssemos mostrar um toast de erro.
+        }
     };
 
     return (

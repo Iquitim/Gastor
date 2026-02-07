@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import api from "../../lib/api";
+import { MousePointerClick } from "lucide-react";
 import { getStoredSettings } from "../../lib/settings";
 
 // Types
@@ -510,7 +511,7 @@ export default function LiveTradingPage() {
                                     <option value="">Selecione...</option>
                                     {strategies.map((s) => (
                                         <option key={s.slug} value={s.slug}>
-                                            {s.icon} {s.name}
+                                            {s.name}
                                         </option>
                                     ))}
                                 </select>
@@ -1014,8 +1015,8 @@ export default function LiveTradingPage() {
                             )}
                         </div>
                     ) : (
-                        <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-12 text-center">
-                            <p className="text-4xl mb-4">👈</p>
+                        <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-12 text-center flex flex-col items-center justify-center">
+                            <MousePointerClick className="w-16 h-16 text-gray-600 mb-4" />
                             <p className="text-gray-400">Selecione uma sessão para ver os detalhes</p>
                         </div>
                     )}

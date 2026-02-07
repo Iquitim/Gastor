@@ -58,7 +58,7 @@ async def list_strategies() -> List[Dict[str, Any]]:
             "slug": "rsi_reversal",
             "name": "RSI Reversal",
             "category": "reversal",
-            "icon": "🔄",
+            "icon": "arrow-right-left",
             "description": "Compra quando RSI indica sobrevendido, vende quando sobrecomprado",
             "idealFor": "Mercados laterais ou fins de tendência",
             "parameters": {
@@ -71,7 +71,7 @@ async def list_strategies() -> List[Dict[str, Any]]:
             "slug": "golden_cross",
             "name": "Golden Cross",
             "category": "trend",
-            "icon": "✨",
+            "icon": "activity",
             "description": "Detecta cruzamentos de médias móveis EMA rápida/lenta",
             "idealFor": "Mercados em tendência clara",
             "parameters": {
@@ -83,7 +83,7 @@ async def list_strategies() -> List[Dict[str, Any]]:
             "slug": "macd_crossover",
             "name": "MACD Crossover",
             "category": "momentum",
-            "icon": "📊",
+            "icon": "bar-chart-2",
             "description": "Sinais de cruzamento entre linha MACD e Signal",
             "idealFor": "Identificar mudanças de momentum",
             "parameters": {
@@ -96,7 +96,7 @@ async def list_strategies() -> List[Dict[str, Any]]:
             "slug": "bollinger_bounce",
             "name": "Bollinger Bounce",
             "category": "volatility",
-            "icon": "🎢",
+            "icon": "layers",
             "description": "Compra na banda inferior, vende na banda superior",
             "idealFor": "Mercados com volatilidade definida",
             "parameters": {
@@ -108,7 +108,7 @@ async def list_strategies() -> List[Dict[str, Any]]:
             "slug": "trend_following",
             "name": "Trend Following",
             "category": "trend",
-            "icon": "📈",
+            "icon": "trending-up",
             "description": "Segue tendência com EMA e confirma com volume",
             "idealFor": "Tendências fortes de longo prazo",
             "parameters": {
@@ -120,7 +120,7 @@ async def list_strategies() -> List[Dict[str, Any]]:
             "slug": "stochastic_rsi",
             "name": "Stochastic RSI",
             "category": "reversal",
-            "icon": "📉",
+            "icon": "arrow-right-left",
             "description": "Combina Stochastic com RSI para sinais mais precisos",
             "idealFor": "Identificar extremos de sobrecompra/venda",
             "parameters": {
@@ -133,7 +133,7 @@ async def list_strategies() -> List[Dict[str, Any]]:
             "slug": "donchian_breakout",
             "name": "Donchian Breakout",
             "category": "trend",
-            "icon": "🏰",
+            "icon": "shield-check",
             "description": "Compra no rompimento do topo, vende no fundo do canal",
             "idealFor": "Breakouts e início de tendências",
             "parameters": {
@@ -144,7 +144,7 @@ async def list_strategies() -> List[Dict[str, Any]]:
             "slug": "ema_rsi_combo",
             "name": "EMA + RSI Combo",
             "category": "hybrid",
-            "icon": "🧬",
+            "icon": "cpu",
             "description": "Combina cruzamento de EMAs com filtro RSI",
             "idealFor": "Reduzir sinais falsos em tendências",
             "parameters": {
@@ -157,7 +157,7 @@ async def list_strategies() -> List[Dict[str, Any]]:
             "slug": "macd_rsi_combo",
             "name": "MACD + RSI Combo",
             "category": "hybrid",
-            "icon": "⚡",
+            "icon": "zap",
             "description": "MACD para timing, RSI para confirmação",
             "idealFor": "Entradas mais seguras em momentum",
             "parameters": {
@@ -169,7 +169,7 @@ async def list_strategies() -> List[Dict[str, Any]]:
             "slug": "volume_breakout",
             "name": "Volume Breakout",
             "category": "momentum",
-            "icon": "📢",
+            "icon": "anchor",
             "description": "Breakout confirmado por explosão de volume",
             "idealFor": "Movimentos explosivos com volume alto",
             "parameters": {

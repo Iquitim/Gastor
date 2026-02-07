@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import api, { getStoredToken, removeStoredToken } from "../lib/api";
 
 // =============================================================================
@@ -40,24 +41,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Check token and fetch user on mount
+    const router = useRouter();
+    const pathname = usePathname();
+
+    // Rotas públicas que não requerem autenticação
+    const publicRoutes = ['/', '/login', '/register', '/auth/google/callback'];
+
+    // Helper para verificar rota pública (insensível a trailing slash e query params)
+    const isRoutePublic = (path: string) => {
+        if (!path) return false;
+        // Normaliza removendo trailing slash se existir (e não for root)
+        const normalized = path.endsWith('/') && path.length > 1 ? path.slice(0, -1) : path;
+        return publicRoutes.some(route =>
+            normalized === route ||
+            normalized.startsWith(route + '?')
+        );
+    };
+
     useEffect(() => {
         const initAuth = async () => {
             const token = getStoredToken();
+            let currentUser = null;
+
             if (token) {
                 try {
-                    const userData = await api.getCurrentUser();
-                    setUser(userData);
+                    currentUser = await api.getCurrentUser();
+                    setUser(currentUser);
                 } catch (error) {
                     console.error("Failed to fetch user:", error);
                     removeStoredToken();
                 }
             }
+
             setIsLoading(false);
+
+            // Redirecionamento baseado em autenticação
+            if (currentUser) {
+                // Se está logado e tenta acessar login/register, manda para live
+                if (pathname === '/login' || pathname === '/register') {
+                    router.push('/live');
+                }
+            } else {
+                const isPublic = isRoutePublic(pathname);
+
+                if (!isPublic && !token) { // Se não tem token e rota não é pública
+                    // Permitir assets estáticos e API
+                    if (!pathname.startsWith('/_next') && !pathname.startsWith('/static') && !pathname.startsWith('/api')) {
+                        router.push('/login');
+                    }
+                }
+            }
         };
 
         initAuth();
-    }, []);
+    }, [pathname]); // Executa na montagem e troca de rota
 
     const login = useCallback(async (email: string, password: string) => {
         const response = await api.login(email, password);
@@ -92,6 +129,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             logout();
         }
     }, [logout]);
+
+    // Evitar flash de conteúdo protegido enquando carrega
+    const isPublic = isRoutePublic(pathname);
+
+    // Se estiver carregando, bloqueia rotas protegidas
+    if (isLoading && !isPublic) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-950">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+            </div>
+        );
+    }
+
+    // Se NÃO estiver carregando, mas NÃO tiver usuário e for rota protegida -> Bloqueia também (evita FOUC na navegação)
+    // O useEffect vai redirecionar em breve, mas enquanto isso não mostramos o conteúdo protegido.
+    if (!isLoading && !user && !isPublic) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-950">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+            </div>
+        );
+    }
 
     return (
         <AuthContext.Provider
