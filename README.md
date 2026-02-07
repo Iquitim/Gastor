@@ -548,6 +548,8 @@ O desenvolvimento do Gastor é contínuo. As próximas etapas planejadas são:
   - Perfis de usuário com dados isolados
   - Login Social com Google OAuth
   - Armazenamento seguro de credenciais
+- [ ] **Painel do Usuário**: Gerenciamento de perfil, configurações e chaves de API.
+- [ ] **Painel Administrativo**: Gestão de usuários, permissões e visão geral do sistema.
 - [ ] **Live Trading Real**: Execução automática em conta real via API Binance.
 - [ ] **Stop-Loss Automático**: Gestão de risco integrada nas sessões.
 - [ ] **Machine Learning Avançado**: Integração com modelos Deep Learning (LSTMs).
