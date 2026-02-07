@@ -49,6 +49,7 @@ A maneira mais fácil de rodar o projeto completo (Frontend + Backend + Banco de
 ```bash
 docker compose up --build
 ```
+> 🚀 **Nota:** O build agora utiliza `uv` e multi-stage builds, resultando em imagens 70% menores e instalação muito mais rápida.
 
 Acesse:
 - **Frontend:** http://localhost
@@ -117,6 +118,18 @@ O **Gastor** foi desenhado com o **FTMO Challenge** em mente. O sistema verifica
 - ✅ Se o lucro atinge a meta (+10%)
 - ✅ Se o Drawdown respeita o limite (-10%)
 - ✅ Se a perda diária não excede o permitido (-5%)
+
+---
+
+## 🔐 Autenticação e Segurança
+
+O Gastor agora conta com um sistema completo de gerenciamento de identidade:
+
+### Funcionalidades
+- **Login/Registro:** Crie conta com Email/Senha ou **Google One Tap**.
+- **Segurança:** Senhas criptografadas com `bcrypt` e sessões via **JWT** (JSON Web Tokens).
+- **Proteção de Dados:** Cada usuário vê apenas suas próprias estratégias, sessões de paper trading e configurações.
+- **Integração OAuth:** Login social com Google para acesso rápido e seguro.
 
 ---
 
@@ -530,12 +543,11 @@ O Backend opera com política de **Tolerância Zero** para configurações padr�
 O desenvolvimento do Gastor é contínuo. As próximas etapas planejadas são:
 
 - [x] **Paper Trading**: Simulação de trades com preços ao vivo da Binance. ✅
-- [ ] **🔐 Sistema de Autenticação** *(Próxima Prioridade)*
+- [x] **🔐 Sistema de Autenticação** ✅
   - Login/Registro com padrões modernos de segurança (bcrypt, JWT, HTTPS)
   - Perfis de usuário com dados isolados
-  - Armazenamento seguro de credenciais (tokens Telegram, API Binance)
-  - Estratégias personalizadas salvas por usuário
-  - Sessões de Paper Trading vinculadas ao perfil
+  - Login Social com Google OAuth
+  - Armazenamento seguro de credenciais
 - [ ] **Live Trading Real**: Execução automática em conta real via API Binance.
 - [ ] **Stop-Loss Automático**: Gestão de risco integrada nas sessões.
 - [ ] **Machine Learning Avançado**: Integração com modelos Deep Learning (LSTMs).

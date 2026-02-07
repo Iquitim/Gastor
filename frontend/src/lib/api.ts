@@ -1,18 +1,65 @@
 // API Configuration
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-// Generic fetch wrapper
-async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
+// Token storage helpers
+const TOKEN_KEY = "gastor_access_token";
+
+export function getStoredToken(): string | null {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setStoredToken(token: string): void {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function removeStoredToken(): void {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem(TOKEN_KEY);
+}
+
+// Generic fetch wrapper with auth support
+async function fetchAPI<T>(endpoint: string, options?: RequestInit & { skipAuth?: boolean }): Promise<T> {
+    const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(options?.headers as Record<string, string>),
+    };
+
+    // Add auth token if available and not skipped
+    if (!options?.skipAuth) {
+        const token = getStoredToken();
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+        }
+    }
+
     const response = await fetch(`${API_URL}${endpoint}`, {
-        headers: {
-            "Content-Type": "application/json",
-            ...options?.headers,
-        },
+        headers,
         ...options,
     });
 
     if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        // Handle 401 - clear token and redirect
+        if (response.status === 401) {
+            removeStoredToken();
+        }
+        const errorData = await response.json().catch(() => ({}));
+
+        let errorMessage = errorData.detail;
+
+        // Handle FastAPI 422 validation errors (array of objects)
+        if (Array.isArray(errorMessage)) {
+            errorMessage = errorMessage
+                .map((err: any) => {
+                    let msg = err.msg || JSON.stringify(err);
+                    // Remove Pydantic "Value error, " prefix if present
+                    return msg.replace(/^Value error, /, "");
+                })
+                .join(", ");
+        }
+
+        throw new Error(errorMessage || `API Error: ${response.status} ${response.statusText}`);
     }
 
     return response.json();
@@ -319,6 +366,83 @@ export const api = {
             total_pnl: number;
             win_rate: number;
         }>("/api/live/stats"),
+
+    // ========================================
+    // Authentication
+    // ========================================
+
+    // Register new user
+    register: (data: { username: string; email: string; password: string }) =>
+        fetchAPI<{ id: number; username: string; email: string }>("/api/auth/register", {
+            method: "POST",
+            body: JSON.stringify(data),
+            skipAuth: true,
+        }),
+
+    // Login (returns token)
+    login: async (email: string, password: string) => {
+        const formData = new URLSearchParams();
+        formData.append("username", email); // OAuth2 uses 'username' field
+        formData.append("password", password);
+
+        const response = await fetch(`${API_URL}/api/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || "Login failed");
+        }
+
+        const data = await response.json();
+        setStoredToken(data.access_token);
+        return data as { access_token: string; token_type: string; user: { id: number; username: string; email: string } };
+    },
+
+    // Get current user
+    getCurrentUser: () =>
+        fetchAPI<{ id: number; username: string; email: string; telegram_chat_id: string | null; is_active: boolean }>("/api/auth/me"),
+
+    // Update profile
+    updateProfile: (data: { username?: string; telegram_chat_id?: string; binance_api_key?: string; binance_api_secret?: string }) =>
+        fetchAPI<{ id: number; username: string; email: string }>("/api/auth/me", {
+            method: "PUT",
+            body: JSON.stringify(data),
+        }),
+
+    // Logout
+    logout: () => {
+        removeStoredToken();
+        return Promise.resolve({ message: "Logged out" });
+    },
+
+    // ========================================
+    // Google OAuth
+    // ========================================
+
+    // Get Google OAuth URL
+    getGoogleAuthUrl: () =>
+        fetchAPI<{ url: string; state: string }>("/api/auth/google/url", { skipAuth: true }),
+
+    // Exchange Google code for JWT token
+    googleCallback: async (code: string, redirectUri?: string) => {
+        const response = await fetch(`${API_URL}/api/auth/google/callback`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code, redirect_uri: redirectUri }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || "Google login failed");
+        }
+
+        const data = await response.json();
+        setStoredToken(data.access_token);
+        return data as { access_token: string; token_type: string; user: { id: number; username: string; email: string } };
+    },
 };
 
 export default api;

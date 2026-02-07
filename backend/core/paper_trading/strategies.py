@@ -63,8 +63,8 @@ def calculate_triggers(
         })
         
     elif slug == "golden_cross":
-        fast = int(params.get("fast", 9))
-        slow = int(params.get("slow", 21))
+        fast = int(params.get("fast", 12))
+        slow = int(params.get("slow", 26))
         
         ema_fast = calc_ema(df['close'], fast)
         ema_slow = calc_ema(df['close'], slow)

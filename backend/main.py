@@ -8,7 +8,7 @@ FastAPI backend for the Gastor trading platform.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import market, strategies, optimizer, results, glossary, live
+from api.routes import market, strategies, optimizer, results, glossary, live, auth
 from core.database import engine, Base
 from core import models  # Important to register models
 
@@ -40,6 +40,7 @@ app.add_middleware(
 )
 
 # Registra rotas
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(market.router, prefix="/api/market", tags=["Market"])
 app.include_router(strategies.router, prefix="/api/strategies", tags=["Strategies"])
 app.include_router(optimizer.router, prefix="/api/optimizer", tags=["Optimizer"])

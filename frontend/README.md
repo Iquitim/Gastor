@@ -7,7 +7,14 @@ Interface moderna para a plataforma Gastor, construída com Next.js 14 (App Rout
 - **Framework**: Next.js 14
 - **Estilização**: Tailwind CSS
 - **Gráficos**: Recharts
-- **Estado**: Context API
+- **Estado**: Context API (AuthContext)
+- **Autenticação**: Google OAuth + JWT
+
+## Páginas Principais
+- `/login`: Acesso ao sistema
+- `/register`: Criação de conta
+- `/trading`: Dashboard principal
+
 
 ## Setup
 

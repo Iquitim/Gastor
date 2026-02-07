@@ -1,11 +1,56 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, JSON, ForeignKey, Boolean
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
+
+
+# =============================================================================
+# USER MODEL
+# =============================================================================
+
+class User(Base):
+    """
+    User account for authentication.
+    
+    Stores credentials and optional integrations (Telegram, Binance, Google OAuth).
+    """
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    username = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=True)  # Nullable for OAuth-only users
+    
+    # OAuth providers
+    google_id = Column(String, unique=True, nullable=True, index=True)
+    
+    # Optional integrations
+    telegram_chat_id = Column(String, nullable=True)
+    binance_api_key = Column(String, nullable=True)      # TODO: Encrypt in production
+    binance_api_secret = Column(String, nullable=True)   # TODO: Encrypt in production
+    
+    # Account status
+    is_active = Column(Boolean, default=True)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    strategies = relationship("Strategy", back_populates="owner")
+    paper_sessions = relationship("PaperSession", back_populates="owner")
+
+
+# =============================================================================
+# STRATEGY & BACKTEST MODELS
+# =============================================================================
 
 class Strategy(Base):
     __tablename__ = "strategies"
 
     id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Nullable for backward compatibility
+    
     name = Column(String, index=True)
     description = Column(String, nullable=True)
     coin = Column(String)
@@ -17,6 +62,9 @@ class Strategy(Base):
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationship
+    owner = relationship("User", back_populates="strategies")
 
 class BacktestResult(Base):
     __tablename__ = "backtest_results"
@@ -47,7 +95,10 @@ class PaperSession(Base):
     __tablename__ = "paper_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String, default="default")  # Para multi-user futuro
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Nullable for backward compatibility
+    
+    # Relationship
+    owner = relationship("User", back_populates="paper_sessions")
     
     # Configuração da Estratégia
     strategy_slug = Column(String)  # "rsi_reversal" ou "custom_123"

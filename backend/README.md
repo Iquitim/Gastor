@@ -23,6 +23,11 @@ source venv/bin/activate
 # venv\Scripts\activate
 
 # 3. Instalar dependências
+# 3. Instalar dependências (Recomendado via UV)
+# Instale o uv: curl -LsSf https://astral.sh/uv/install.sh | sh
+uv pip install -r requirements.txt
+
+# Ou via pip clássico:
 pip install -r requirements.txt
 
 # 4. Iniciar servidor

@@ -4,10 +4,12 @@ import { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useData } from "../context/DataContext";
 import api, { OHLCVData } from "../lib/api";
+import ProtectedRoute from "../components/ProtectedRoute";
 
 const Chart = dynamic(() => import("@/components/Chart"), { ssr: false });
 
 const COINS = [
+
   { value: "SOL/USDT", label: "SOL/USDT" },
   { value: "ETH/USDT", label: "ETH/USDT" },
   { value: "BTC/USDT", label: "BTC/USDT" },
@@ -35,7 +37,7 @@ const TIMEFRAMES = [
   { value: "1d", label: "1 dia" },
 ];
 
-export default function Dashboard() {
+function DashboardContent() {
   const { setDataLoaded, hasData, dataInfo, chartData } = useData();
   const [selectedCoin, setSelectedCoin] = useState("SOL/USDT");
   const [selectedDays, setSelectedDays] = useState(90);
@@ -278,5 +280,13 @@ export default function Dashboard() {
         ))}
       </div>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <ProtectedRoute>
+      <DashboardContent />
+    </ProtectedRoute>
   );
 }

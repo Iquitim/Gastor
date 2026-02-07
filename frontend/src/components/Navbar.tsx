@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useData } from "../context/DataContext";
+import { useAuth } from "../context/AuthContext";
 
 // SVG Icons para design minimalista
 const Icons = {
@@ -54,6 +55,16 @@ const Icons = {
             <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
         </svg>
     ),
+    user: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+        </svg>
+    ),
+    logout: (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+        </svg>
+    ),
 };
 
 const navItems = [
@@ -71,13 +82,21 @@ export default function Navbar() {
     const pathname = usePathname();
     const router = useRouter();
     const { clearData } = useData();
+    const { user, isAuthenticated, logout, isLoading } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
+    const [showUserMenu, setShowUserMenu] = useState(false);
 
     const handleReset = () => {
         if (confirm("Tem certeza que deseja resetar todos os dados e voltar ao início?")) {
             clearData();
             router.push('/');
         }
+    };
+
+    const handleLogout = () => {
+        logout();
+        setShowUserMenu(false);
+        router.push('/');
     };
 
     return (
@@ -129,6 +148,49 @@ export default function Navbar() {
                             >
                                 {Icons.trash}
                             </button>
+
+                            {/* User Menu */}
+                            <div className="relative ml-2">
+                                {isLoading ? (
+                                    <div className="w-8 h-8 rounded-full bg-slate-800 animate-pulse" />
+                                ) : isAuthenticated && user ? (
+                                    <>
+                                        <button
+                                            onClick={() => setShowUserMenu(!showUserMenu)}
+                                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors"
+                                        >
+                                            <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center text-xs font-bold text-white">
+                                                {user.username.charAt(0).toUpperCase()}
+                                            </div>
+                                            <span className="text-sm text-slate-300">{user.username}</span>
+                                        </button>
+
+                                        {showUserMenu && (
+                                            <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50">
+                                                <div className="px-4 py-3 border-b border-slate-700">
+                                                    <p className="text-sm font-medium text-white">{user.username}</p>
+                                                    <p className="text-xs text-slate-400 truncate">{user.email}</p>
+                                                </div>
+                                                <button
+                                                    onClick={handleLogout}
+                                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-red-400 transition-colors"
+                                                >
+                                                    {Icons.logout}
+                                                    Sair
+                                                </button>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <Link
+                                        href="/login"
+                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors"
+                                    >
+                                        {Icons.user}
+                                        Entrar
+                                    </Link>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -185,6 +247,37 @@ export default function Navbar() {
                             {Icons.trash}
                             Resetar
                         </button>
+
+                        {/* Mobile User Menu */}
+                        <div className="border-t border-slate-700 pt-2 mt-2">
+                            {isAuthenticated && user ? (
+                                <>
+                                    <div className="px-3 py-2">
+                                        <p className="text-sm font-medium text-white">{user.username}</p>
+                                        <p className="text-xs text-slate-400">{user.email}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            handleLogout();
+                                            setIsOpen(false);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-slate-800 hover:text-red-400 transition-colors"
+                                    >
+                                        {Icons.logout}
+                                        Sair
+                                    </button>
+                                </>
+                            ) : (
+                                <Link
+                                    href="/login"
+                                    onClick={() => setIsOpen(false)}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-emerald-400 hover:bg-slate-800 transition-colors"
+                                >
+                                    {Icons.user}
+                                    Entrar
+                                </Link>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

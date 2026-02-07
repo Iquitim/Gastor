@@ -49,7 +49,13 @@ async def list_glossary(
             "slug": "ema",
             "name": "EMA (Exponential Moving Average)",
             "category": "medias_moveis",
-            "short_description": "Média móvel com peso exponencial"
+            "short_description": "Média móvel com peso exponencial (período baseado em CANDLES)"
+        },
+        {
+            "slug": "golden_cross",
+            "name": "Golden Cross",
+            "category": "medias_moveis",
+            "short_description": "Cruzamento de EMAs indicando reversão de alta (EMA 12/26 padrão)"
         }
     ]
     
@@ -91,9 +97,82 @@ async def get_term(slug: str) -> Dict[str, Any]:
             ]
         }
     
+    if slug == "ema":
+        return {
+            "slug": "ema",
+            "name": "EMA (Exponential Moving Average)",
+            "category": "medias_moveis",
+            "short_description": "Média móvel com peso exponencial nos preços mais recentes",
+            "full_explanation": """A EMA (Média Móvel Exponencial) dá mais peso aos preços recentes, reagindo mais rápido a mudanças do que a SMA.
+
+**IMPORTANTE: O período da EMA é baseado em CANDLES, não em dias!**
+
+- Se timeframe = 1m → EMA(12) usa os últimos 12 minutos
+- Se timeframe = 1h → EMA(12) usa as últimas 12 horas  
+- Se timeframe = 1d → EMA(12) usa os últimos 12 dias
+
+O multiplicador de peso é calculado como: 2 / (período + 1)
+
+Quanto menor o período, mais sensível a mudanças de preço.""",
+            "formula": "EMA = (Preço × k) + (EMA_anterior × (1 - k))",
+            "formula_legend": {
+                "Preço": "Preço de fechamento do candle atual",
+                "k": "Multiplicador = 2 / (período + 1)",
+                "EMA_anterior": "Valor da EMA no candle anterior"
+            },
+            "analogy": "A EMA é como uma memória que valoriza mais o que aconteceu recentemente. Quanto maior o período, mais 'esquecida' ela fica de mudanças rápidas.",
+            "usage": [
+                "EMA curta (9-12): Mais sensível, bom para entradas rápidas",
+                "EMA longa (21-26): Mais suave, boa para identificar tendência",
+                "Preço acima da EMA: Tendência de alta",
+                "Preço abaixo da EMA: Tendência de baixa"
+            ],
+            "recommended_periods": {
+                "1m": "EMA 5/13 ou 12/26 (menos ruído)",
+                "15m": "EMA 9/21",
+                "1h": "EMA 12/26",
+                "4h": "EMA 12/26 ou 20/50",
+                "1d": "EMA 50/200 (institucional)"
+            }
+        }
+    
+    if slug == "golden_cross":
+        return {
+            "slug": "golden_cross",
+            "name": "Golden Cross",
+            "category": "medias_moveis",
+            "short_description": "Cruzamento de médias móveis indicando reversão de alta",
+            "full_explanation": """O Golden Cross ocorre quando uma média móvel de curto prazo cruza ACIMA de uma média móvel de longo prazo.
+
+**No Gastor, usamos EMA 12/26 como padrão** (baseado no padrão MACD).
+
+**PERÍODOS SÃO BASEADOS EM CANDLES:**
+- Timeframe 1m + EMA 12 = usa os últimos 12 minutos
+- Timeframe 1h + EMA 12 = usa as últimas 12 horas
+- Timeframe 1d + EMA 12 = usa os últimos 12 dias
+
+O oposto (Death Cross) ocorre quando a EMA rápida cruza ABAIXO da lenta.""",
+            "formula": "Golden Cross: EMA_rápida > EMA_lenta (após cruzamento)",
+            "formula_legend": {
+                "EMA_rápida": "Média móvel de curto prazo (ex: 12 candles)",
+                "EMA_lenta": "Média móvel de longo prazo (ex: 26 candles)"
+            },
+            "analogy": "É como dois carros em uma corrida: quando o carro mais rápido (EMA curta) ultrapassa o mais lento (EMA longa), indica que o momentum está acelerando.",
+            "usage": [
+                "EMA rápida > EMA lenta: Sinal de COMPRA",
+                "EMA rápida < EMA lenta: Sinal de VENDA (Death Cross)",
+                "Combine com volume para confirmar a força do sinal"
+            ],
+            "gastor_defaults": {
+                "fast": 12,
+                "slow": 26,
+                "explanation": "Baseado no padrão MACD, oferece bom equilíbrio entre sensibilidade e estabilidade"
+            }
+        }
+    
     return {
         "error": f"Termo '{slug}' não encontrado",
-        "available": ["rsi", "ema", "candlestick"]
+        "available": ["rsi", "ema", "golden_cross", "candlestick"]
     }
 
 

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "../components/Navbar";
 import { DataProvider } from "../context/DataContext";
+import { AuthProvider } from "../context/AuthContext";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -23,12 +24,14 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="dark">
       <body className={`${inter.variable} font-sans bg-slate-950 text-slate-100 antialiased`}>
-        <DataProvider>
-          <Navbar />
-          <main className="min-h-screen">
-            {children}
-          </main>
-        </DataProvider>
+        <AuthProvider>
+          <DataProvider>
+            <Navbar />
+            <main className="min-h-screen">
+              {children}
+            </main>
+          </DataProvider>
+        </AuthProvider>
       </body>
     </html>
   );

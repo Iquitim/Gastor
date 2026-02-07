@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from typing import Dict, Any, Optional, List
 from sqlalchemy.orm import Session
 import asyncio
+import os
 from datetime import datetime
 
 from core.database import get_db
@@ -366,9 +367,10 @@ async def get_session(
     """Retorna detalhes de uma sessão."""
     session = get_session_or_404(session_id, db)
     
-    # Buscar posição
+    # Buscar posição ABERTA apenas
     position = db.query(PaperPosition).filter(
-        PaperPosition.session_id == session_id
+        PaperPosition.session_id == session_id,
+        PaperPosition.status == "OPEN"
     ).first()
     
     # Buscar trades recentes
