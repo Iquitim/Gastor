@@ -39,6 +39,63 @@ class User(Base):
     # Relationships
     strategies = relationship("Strategy", back_populates="owner")
     paper_sessions = relationship("PaperSession", back_populates="owner")
+    
+    # New Config Relationships
+    keys = relationship("ExchangeKey", back_populates="user", cascade="all, delete-orphan")
+    telegram_config = relationship("TelegramConfig", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    fee_config = relationship("UserConfig", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    config = relationship("UserConfig", back_populates="user", uselist=False, viewonly=True, sync_backref=False) # Alias for backward compat if needed, or just rename outright
+
+
+class ExchangeKey(Base):
+    __tablename__ = "exchange_keys"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    exchange_name = Column(String, default="binance") # Enum: binance, binance_us
+    api_key_encrypted = Column(String, nullable=False)
+    api_secret_encrypted = Column(String, nullable=False)
+    label = Column(String, default="Conta Principal")
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", back_populates="keys")
+
+
+class TelegramConfig(Base):
+    __tablename__ = "telegram_configs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True)
+    bot_token_encrypted = Column(String, nullable=True) # Opcional: Usuário pode usar bot próprio
+    chat_id = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True)
+    
+    user = relationship("User", back_populates="telegram_config")
+
+
+class UserConfig(Base):
+    __tablename__ = "user_configs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True)
+    
+    # Fees (legacy but still needed)
+    exchange_fee = Column(Float, default=0.001) # 0.1% padrão
+    slippage_overrides = Column(String, default="{}") # JSON string
+    
+    # Backtest Settings
+    backtest_initial_balance = Column(Float, default=10000.0)
+    backtest_use_compound = Column(Boolean, default=True)
+    backtest_position_size = Column(Float, default=1.0) # 100%
+    
+    # Paper Trading Settings
+    paper_initial_balance = Column(Float, default=10000.0)
+    paper_default_coin = Column(String, default="SOL/USDT")
+    paper_default_timeframe = Column(String, default="1h")
+    paper_use_compound = Column(Boolean, default=True)
+    
+    user = relationship("User", back_populates="config")
 
 
 # =============================================================================

@@ -8,9 +8,10 @@ Sem dependências do Streamlit - puro Python para uso no backend.
 
 from typing import Dict, Optional
 
-# Taxa fixa da exchange (Binance Spot)
-# Maker: 0.1% | Taker: 0.1% (sem desconto BNB)
-EXCHANGE_FEE = 0.001  # 0.1%
+from core.config_loader import ConfigLoader
+
+# Taxa fixa da exchange (Binance Spot) - Padrão do Sistema
+DEFAULT_EXCHANGE_FEE = ConfigLoader.get_int("EXCHANGE_FEE", 0.001)  # 0.1%
 
 # Slippage estimado por moeda (CONSERVADOR)
 SLIPPAGE_BY_COIN: Dict[str, float] = {
@@ -33,7 +34,6 @@ DEFAULT_SLIPPAGE = 0.003  # 0.3%
 # Configurações de moedas disponíveis
 COINS = ['SOL/USDT', 'ETH/USDT', 'BTC/USDT', 'XRP/USDT', 'AVAX/USDT', 'DOGE/USDT']
 
-
 def get_total_fee(
     coin: str, 
     custom_exchange_fee: Optional[float] = None,
@@ -44,13 +44,14 @@ def get_total_fee(
     
     Args:
         coin: Par de trading (ex: "SOL/USDT")
-        custom_exchange_fee: Taxa de exchange customizada (opcional)
-        custom_slippage: Dict de slippage customizado por moeda (opcional)
+        custom_exchange_fee: Taxa de exchange customizada (opcional, do usuário)
+        custom_slippage: Dict de slippage customizado por moeda (opcional, do usuário)
         
     Returns:
         Taxa total em decimal (ex: 0.0015 = 0.15%)
     """
-    exchange_fee = custom_exchange_fee if custom_exchange_fee is not None else EXCHANGE_FEE
+    # Prioridade: Custom User Fee > System Default
+    exchange_fee = custom_exchange_fee if custom_exchange_fee is not None else DEFAULT_EXCHANGE_FEE
     
     if custom_slippage and coin in custom_slippage:
         slippage = custom_slippage[coin]
@@ -71,7 +72,7 @@ def get_fee_breakdown(
     Returns:
         Dict com exchange_fee, slippage, total_fee (todos em decimal)
     """
-    exchange_fee = custom_exchange_fee if custom_exchange_fee is not None else EXCHANGE_FEE
+    exchange_fee = custom_exchange_fee if custom_exchange_fee is not None else DEFAULT_EXCHANGE_FEE
     
     if custom_slippage and coin in custom_slippage:
         slippage = custom_slippage[coin]

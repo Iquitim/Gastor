@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import NoDataBanner from "../../../components/NoDataBanner";
 import SavedStrategiesList from "../../../components/SavedStrategiesList";
 import { useData } from "../../../context/DataContext";
 import api from "../../../lib/api";
 import { getStoredSettings } from "../../../lib/settings";
 import { useRouter } from "next/navigation";
+
+// ... (constants remain the same)
+
+// ... (constants remain the same)
 
 // Indicadores disponíveis para construir regras
 const INDICATORS = [
@@ -79,6 +83,42 @@ export default function BuilderPage() {
     const [isTesting, setIsTesting] = useState(false);
     const [testResult, setTestResult] = useState<string | null>(null);
     const [showLoadModal, setShowLoadModal] = useState(false);
+
+    // Define handleLoad first with useCallback
+    const handleLoad = useCallback((strategy: any) => {
+        if (strategy.rules) {
+            setStrategyName(strategy.name);
+            setBuyGroups(strategy.rules.buy || [createEmptyGroup(1, "buy")]);
+            setSellGroups(strategy.rules.sell || [createEmptyGroup(1, "sell")]);
+            setBuyLogic(strategy.rules.buyLogic || "OR");
+            setSellLogic(strategy.rules.sellLogic || "OR");
+            setShowLoadModal(false);
+        } else if (strategy.parameters) {
+            // Fallback for system strategies if needed, though they are not fully editable
+        }
+    }, []);
+
+    // Load strategy from URL param if present
+    // Load strategy from URL param if present
+    useEffect(() => {
+        const loadId = new URLSearchParams(window.location.search).get("load");
+        if (loadId) {
+            // Need to fix getStrategy to support custom IDs properly or use a specific endpoint
+            // backend get_strategy supports "custom_ID" slug format
+            api.getStrategy(`custom_${loadId}`).then(strategy => {
+                if (strategy) {
+                    handleLoad(strategy);
+                    // Clean URL
+                    window.history.replaceState({}, "", "/strategies/builder");
+                }
+            }).catch(err => {
+                console.error("Erro ao carregar estratégia:", err);
+                // setLoadError("Erro ao carregar estratégia para edição: " + err.message);
+            });
+        }
+    }, [handleLoad]);
+
+    // ... (rest of the component)
 
     // Add rule to group
     const addRuleToGroup = (section: "buy" | "sell", groupId: number) => {
@@ -557,16 +597,7 @@ export default function BuilderPage() {
         }
     };
 
-    const handleLoad = (strategy: any) => {
-        if (strategy.rules) {
-            setStrategyName(strategy.name);
-            setBuyGroups(strategy.rules.buy || [createEmptyGroup(1, "buy")]);
-            setSellGroups(strategy.rules.sell || [createEmptyGroup(1, "sell")]);
-            setBuyLogic(strategy.rules.buyLogic || "OR");
-            setSellLogic(strategy.rules.sellLogic || "OR");
-            setShowLoadModal(false);
-        }
-    };
+
 
     return (
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

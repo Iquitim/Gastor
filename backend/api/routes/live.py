@@ -737,19 +737,20 @@ async def get_stats(
 @router.delete("/sessions/{session_id}")
 async def delete_session(
     session_id: int,
+    force: bool = False,
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Deleta uma sessão e todos os seus dados.
     
-    A sessão deve estar parada antes de ser deletada.
+    A sessão deve estar parada antes de ser deletada, a menos que force=True.
     """
     session = get_session_or_404(session_id, db)
     
-    if session.status == "running":
+    if session.status == "running" and not force:
         raise HTTPException(
             status_code=400,
-            detail="Pare a sessão antes de deletar"
+            detail="Pare a sessão antes de deletar ou use Force Delete"
         )
     
     # Limpar dados relacionados

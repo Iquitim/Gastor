@@ -1,5 +1,5 @@
 # Estágio de Build
-FROM node:20-alpine AS builder
+FROM public.ecr.aws/docker/library/node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -15,7 +15,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # Estágio de Servidor (Nginx)
-FROM nginx:alpine
+FROM public.ecr.aws/nginx/nginx:alpine
 # Copia os arquivos estáticos gerados (out) para o diretório do Nginx
 COPY --from=builder /app/out /usr/share/nginx/html
 # Configuração básica do Nginx para lidar com rotas do React (SPA)

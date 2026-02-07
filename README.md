@@ -543,17 +543,17 @@ O Backend opera com política de **Tolerância Zero** para configurações padr�
 O desenvolvimento do Gastor é contínuo. As próximas etapas planejadas são:
 
 - [x] **Paper Trading**: Simulação de trades com preços ao vivo da Binance. ✅
+  - **Force Delete**: Exclusão instantânea de sessões rodando (sem delay).
+  - **Optimistic UI**: Feedback visual imediato em todas as ações.
 - [x] **🔐 Sistema de Autenticação** ✅
-  - Login/Registro com padrões modernos de segurança (bcrypt, JWT, HTTPS)
-  - Perfis de usuário com dados isolados
-  - Login Social com Google OAuth
-  - Armazenamento seguro de credenciais
-- [ ] **Painel do Usuário**: Gerenciamento de perfil, configurações e chaves de API.
-- [ ] **Painel Administrativo**: Gestão de usuários, permissões e visão geral do sistema.
+  - Login/Registro, Perfis isolados, Google OAuth.
+- [ ] **Refinamentos de Sessão (Em Breve)**:
+  - Reset de IDs de sessão (reuso de slots).
+  - Persistência em background (sessões continuam rodando após logout).
+  - Isolamento total de estado entre logins.
+- [ ] **Painel Administrativo**: Gestão de usuários e visão global do sistema.
 - [ ] **Live Trading Real**: Execução automática em conta real via API Binance.
-- [ ] **Stop-Loss Automático**: Gestão de risco integrada nas sessões.
 - [ ] **Machine Learning Avançado**: Integração com modelos Deep Learning (LSTMs).
-- [ ] **Gestão de Portfólio**: Otimização de alocação entre múltiplas estratégias simultâneas.
 
 ---
 

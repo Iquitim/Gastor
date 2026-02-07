@@ -228,6 +228,7 @@ export default function LiveTradingPage() {
     const [selectedSession, setSelectedSession] = useState<SessionDetails | null>(null);
     const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
     const selectedSessionIdRef = useRef<number | null>(null); // Para evitar race condition
+    const deletedSessionIds = useRef<Set<number>>(new Set()); // Para evitar que polling traga de volta sessões deletadas
 
     const [strategies, setStrategies] = useState<Strategy[]>([]);
     const [loading, setLoading] = useState(false);
@@ -257,7 +258,9 @@ export default function LiveTradingPage() {
     const loadSessions = useCallback(async () => {
         try {
             const data = await api.getLiveSessions() as Session[];
-            setSessions(data);
+            // Filter out sessions that are marked as deleted locally
+            const filteredData = data.filter(s => !deletedSessionIds.current.has(s.id));
+            setSessions(filteredData);
         } catch (e) {
             console.error("Failed to load sessions", e);
         }
@@ -376,8 +379,11 @@ export default function LiveTradingPage() {
         }
     };
 
-    const handleDeleteSession = async (sessionId: number) => {
+    const handleDeleteSession = async (sessionId: number, force: boolean = false) => {
         // Confirmação já é feita no onClick do botão, não precisa aqui
+
+        // Add to ignored list immediately to prevent polling from bringing it back
+        deletedSessionIds.current.add(sessionId);
 
         // Feedback imediato - remove da UI antes da API responder
         if (selectedSession?.session.id === sessionId) {
@@ -388,12 +394,14 @@ export default function LiveTradingPage() {
 
         // Não precisa de loading pois UI já foi atualizada
         try {
-            await api.deleteLiveSession(sessionId);
+            await api.deleteLiveSession(sessionId, force);
             // Não recarrega - a UI já foi atualizada otimisticamente
         } catch (e: unknown) {
             const errorMessage = e instanceof Error ? e.message : "Erro ao deletar sessão";
             setError(errorMessage);
-            // Recarrega apenas em caso de erro para restaurar estado correto
+
+            // Se falhar, remove da lista de ignorados e recarrega para restaurar
+            deletedSessionIds.current.delete(sessionId);
             await loadSessions();
         }
     };
@@ -650,11 +658,8 @@ export default function LiveTradingPage() {
                                         <button
                                             onClick={() => {
                                                 if (selectedSession.session.status === "running") {
-                                                    if (confirm("A sessão está rodando. Deseja parar e depois deletar?")) {
-                                                        handleStopSession(selectedSession.session.id).then(() => {
-                                                            // Timeout mínimo para garantir que o stop foi processado
-                                                            setTimeout(() => handleDeleteSession(selectedSession.session.id), 100);
-                                                        });
+                                                    if (confirm("A sessão está rodando. Deseja forçar a deleção? Isso irá parar a sessão e remover todos os dados imediatamente.")) {
+                                                        handleDeleteSession(selectedSession.session.id, true);
                                                     }
                                                 } else {
                                                     if (confirm("Tem certeza que deseja deletar esta sessão?")) {

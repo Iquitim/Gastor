@@ -74,8 +74,6 @@ const navItems = [
     { href: "/optimizer", label: "Otimizador", icon: Icons.optimizer },
     { href: "/results", label: "Resultados", icon: Icons.results },
     { href: "/live", label: "Paper Trading", icon: Icons.live },
-    { href: "/glossary", label: "Glossário", icon: Icons.glossary },
-    { href: "/settings", label: "Configurações", icon: Icons.settings },
 ];
 
 export default function Navbar() {
@@ -166,18 +164,39 @@ export default function Navbar() {
                                         </button>
 
                                         {showUserMenu && (
-                                            <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50">
+                                            <div className="absolute right-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50">
                                                 <div className="px-4 py-3 border-b border-slate-700">
                                                     <p className="text-sm font-medium text-white">{user.username}</p>
                                                     <p className="text-xs text-slate-400 truncate">{user.email}</p>
                                                 </div>
-                                                <button
-                                                    onClick={handleLogout}
-                                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-red-400 transition-colors"
-                                                >
-                                                    {Icons.logout}
-                                                    Sair
-                                                </button>
+                                                <div className="py-1">
+                                                    <Link
+                                                        href="/user/panel"
+                                                        onClick={() => setShowUserMenu(false)}
+                                                        className="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                                                    >
+                                                        {Icons.user}
+                                                        Painel do Usuário
+                                                    </Link>
+
+                                                    <Link
+                                                        href="/glossary"
+                                                        onClick={() => setShowUserMenu(false)}
+                                                        className="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                                                    >
+                                                        {Icons.glossary}
+                                                        Glossário
+                                                    </Link>
+                                                </div>
+                                                <div className="border-t border-slate-700">
+                                                    <button
+                                                        onClick={handleLogout}
+                                                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-red-400 transition-colors"
+                                                    >
+                                                        {Icons.logout}
+                                                        Sair
+                                                    </button>
+                                                </div>
                                             </div>
                                         )}
                                     </>

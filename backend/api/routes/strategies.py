@@ -261,33 +261,73 @@ class CustomStrategyCreate(BaseModel):
     timeframe: str
     rules: Dict[str, Any]
 
+from core.auth import get_current_user
+from core.models import User
+
 @router.post("/custom")
-def create_custom_strategy(strategy: CustomStrategyCreate, db: Session = Depends(get_db)):
-    """Salva uma estratégia customizada no banco de dados."""
-    db_strategy = Strategy(
-        name=strategy.name,
-        description=strategy.description,
-        coin=strategy.coin,
-        period=strategy.period,
-        timeframe=strategy.timeframe,
-        rules=strategy.rules
-    )
-    db.add(db_strategy)
-    db.commit()
-    db.refresh(db_strategy)
-    return {"id": db_strategy.id, "status": "success"}
+def create_custom_strategy(
+    strategy: CustomStrategyCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Salva uma estratégia customizada (Upsert: Atualiza se já existir com mesmo nome)."""
+    
+    # Verificar se já existe estratégia com esse nome para o usuário
+    existing_strategy = db.query(Strategy).filter(
+        Strategy.owner_id == current_user.id,
+        Strategy.name == strategy.name
+    ).first()
+    
+    if existing_strategy:
+        # Atualizar existente
+        existing_strategy.description = strategy.description
+        existing_strategy.coin = strategy.coin
+        existing_strategy.period = strategy.period
+        existing_strategy.timeframe = strategy.timeframe
+        existing_strategy.rules = strategy.rules
+        
+        db.commit()
+        db.refresh(existing_strategy)
+        return {"id": existing_strategy.id, "status": "updated", "message": "Estratégia atualizada com sucesso!"}
+    
+    else:
+        # Criar nova
+        db_strategy = Strategy(
+            owner_id=current_user.id,
+            name=strategy.name,
+            description=strategy.description,
+            coin=strategy.coin,
+            period=strategy.period,
+            timeframe=strategy.timeframe,
+            rules=strategy.rules
+        )
+        db.add(db_strategy)
+        db.commit()
+        db.refresh(db_strategy)
+        return {"id": db_strategy.id, "status": "created", "message": "Estratégia criada com sucesso!"}
 
 @router.get("/custom")
-def list_custom_strategies(db: Session = Depends(get_db)):
-    """Lista todas as estratégias customizadas salvas."""
-    return db.query(Strategy).order_by(Strategy.created_at.desc()).all()
+def list_custom_strategies(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Lista todas as estratégias customizadas do usuário."""
+    return db.query(Strategy).filter(Strategy.owner_id == current_user.id).order_by(Strategy.created_at.desc()).all()
 
 @router.delete("/custom/{strategy_id}")
-def delete_custom_strategy(strategy_id: int, db: Session = Depends(get_db)):
-    """Remove uma estratégia customizada."""
-    strategy = db.query(Strategy).filter(Strategy.id == strategy_id).first()
+def delete_custom_strategy(
+    strategy_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Remove uma estratégia customizada (Apenas se for dono)."""
+    strategy = db.query(Strategy).filter(
+        Strategy.id == strategy_id,
+        Strategy.owner_id == current_user.id
+    ).first()
+    
     if not strategy:
-        raise HTTPException(status_code=404, detail="Estratégia não encontrada")
+        raise HTTPException(status_code=404, detail="Estratégia não encontrada ou acesso negado")
     
     db.delete(strategy)
     db.commit()

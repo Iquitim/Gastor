@@ -17,11 +17,18 @@ import os
 from typing import Optional
 
 
-# Carrega token do ambiente
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+from core.config_loader import ConfigLoader
+
+# Carrega token padrão do ambiente/secrets
+DEFAULT_BOT_TOKEN = ConfigLoader.get_secret("TELEGRAM_BOT_TOKEN", "")
 
 
-async def send_telegram(chat_id: str, message: str, parse_mode: str = "HTML") -> bool:
+async def send_telegram(
+    chat_id: str, 
+    message: str, 
+    parse_mode: str = "HTML",
+    bot_token: Optional[str] = None
+) -> bool:
     """
     Envia mensagem via Telegram Bot.
     
@@ -29,19 +36,22 @@ async def send_telegram(chat_id: str, message: str, parse_mode: str = "HTML") ->
         chat_id: ID do chat/grupo do usuário
         message: Texto da mensagem
         parse_mode: Formato do texto (HTML ou Markdown)
+        bot_token: Token específico (opcional). Se None, usa o DEFAULT_BOT_TOKEN
         
     Returns:
         True se enviou com sucesso
     """
-    if not TELEGRAM_BOT_TOKEN:
-        print("[Telegram] Bot token not configured (TELEGRAM_BOT_TOKEN)")
+    token_to_use = bot_token if bot_token else DEFAULT_BOT_TOKEN
+    
+    if not token_to_use:
+        print("[Telegram] Bot token not configured (TELEGRAM_BOT_TOKEN or user override)")
         return False
     
     if not chat_id:
         print("[Telegram] No chat_id provided")
         return False
     
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    url = f"https://api.telegram.org/bot{token_to_use}/sendMessage"
     
     try:
         async with httpx.AsyncClient() as client:
@@ -83,6 +93,7 @@ async def send_trade_alert(
     pnl_pct: Optional[float] = None,
     session_id: Optional[int] = None,
     strategy_name: Optional[str] = None,
+    bot_token: Optional[str] = None,
 ) -> bool:
     """
     Envia alerta formatado de trade.
@@ -99,6 +110,7 @@ async def send_trade_alert(
         pnl_pct: Percentual de lucro/prejuízo
         session_id: ID da sessão
         strategy_name: Nome da estratégia
+        bot_token: Token específico (opcional)
     """
     emoji = "🟢" if trade_type == "BUY" else "🔴"
     
@@ -234,5 +246,5 @@ async def send_signal_alert(
 
 # Utilitário para verificar se Telegram está configurado
 def is_telegram_configured() -> bool:
-    """Retorna True se o Telegram Bot está configurado."""
-    return bool(TELEGRAM_BOT_TOKEN)
+    """Retorna True se o Telegram Bot está configurado (padrão)."""
+    return bool(DEFAULT_BOT_TOKEN)

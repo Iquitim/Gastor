@@ -182,7 +182,7 @@ export const api = {
         timeframe: string;
         rules: any;
     }) =>
-        fetchAPI<{ id: number; status: string }>("/api/strategies/custom", {
+        fetchAPI<{ id: number; status: string; message?: string }>("/api/strategies/custom", {
             method: "POST",
             body: JSON.stringify(strategy),
         }),
@@ -322,8 +322,8 @@ export const api = {
         }),
 
     // Delete a session
-    deleteLiveSession: (sessionId: number) =>
-        fetchAPI<{ message: string }>(`/api/live/sessions/${sessionId}`, {
+    deleteLiveSession: (sessionId: number, force: boolean = false) =>
+        fetchAPI<{ message: string }>(`/api/live/sessions/${sessionId}${force ? "?force=true" : ""}`, {
             method: "DELETE",
         }),
 
@@ -443,6 +443,80 @@ export const api = {
         setStoredToken(data.access_token);
         return data as { access_token: string; token_type: string; user: { id: number; username: string; email: string } };
     },
+
+    // ========================================
+    // User Panel Settings (Keys, Telegram, Fees)
+    // ========================================
+
+    // Keys
+    getUserKeys: () => fetchAPI<{ id: number; label: string; exchange: string; api_key_masked: string; is_active: boolean; created_at: string }[]>("/api/user/keys"),
+
+    addUserKey: (data: { label: string; api_key: string; api_secret: string; exchange?: string }) =>
+        fetchAPI<{ id: number; label: string; exchange: string }>(`/api/user/keys`, { method: "POST", body: JSON.stringify(data) }),
+
+    deleteUserKey: (keyId: number) =>
+        fetchAPI<{ status: string }>(`/api/user/keys/${keyId}`, { method: "DELETE" }),
+
+    // Telegram
+    getTelegramConfig: () =>
+        fetchAPI<{ configured: boolean; chat_id?: string; is_active?: boolean; bot_token_masked?: string }>("/api/user/telegram"),
+
+    updateTelegramConfig: (data: { chat_id: string; bot_token?: string; is_active: boolean }) =>
+        fetchAPI<{ status: string }>("/api/user/telegram", { method: "POST", body: JSON.stringify(data) }),
+
+    testTelegram: () =>
+        fetchAPI<{ status: string }>("/api/user/telegram/test", { method: "POST" }),
+
+    // User Config (Fees & Preferences)
+    getUserConfig: () =>
+        fetchAPI<{
+            // Fees
+            exchange_fee: number;
+            slippage_overrides: Record<string, number>;
+
+            // Backtest
+            backtest_initial_balance: number;
+            backtest_use_compound: boolean;
+            backtest_position_size: number;
+
+            // Paper Trading
+            paper_initial_balance: number;
+            paper_default_coin: string;
+            paper_default_timeframe: string;
+            paper_use_compound: boolean;
+
+            // System
+            system_defaults: Record<string, number>;
+            supported_coins: string[];
+        }>("/api/user/config"),
+
+    updateUserConfig: (data: {
+        exchange_fee: number;
+        slippage_overrides: Record<string, number>;
+        backtest_initial_balance: number;
+        backtest_use_compound: boolean;
+        backtest_position_size: number;
+        paper_initial_balance: number;
+        paper_default_coin: string;
+        paper_default_timeframe: string;
+        paper_use_compound: boolean;
+    }) =>
+        fetchAPI<{ status: string }>("/api/user/config", {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+
+    // Strategies
+    getUserStrategies: () =>
+        fetchAPI<{
+            id: number;
+            name: string;
+            description: string;
+            coin: string;
+            timeframe: string;
+            created_at: string;
+        }[]>("/api/user/strategies"),
+
 };
 
 export default api;

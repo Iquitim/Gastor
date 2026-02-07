@@ -1,5 +1,5 @@
 # Build stage
-FROM python:3.9-slim AS builder
+FROM public.ecr.aws/docker/library/python:3.9-slim AS builder
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ COPY requirements.txt .
 RUN uv pip install --no-cache -r requirements.txt
 
 # Runtime stage
-FROM python:3.9-slim
+FROM public.ecr.aws/docker/library/python:3.9-slim
 
 WORKDIR /app
 
