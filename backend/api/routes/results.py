@@ -56,42 +56,69 @@ class MarketContext(BaseModel):
     days: int
     timeframe: str
 
-# Armazenamento em memória (simples)
-ACTIVE_STRATEGY: Optional[ActiveStrategy] = None
-ACTIVE_MARKET_CONTEXT: Optional[MarketContext] = None
+# Armazenamento em memória (simples) - Keyed by user_id
+ACTIVE_STRATEGY: Dict[int, ActiveStrategy] = {}
+ACTIVE_MARKET_CONTEXT: Dict[int, MarketContext] = {}
+
+from api.routes.auth import get_current_user
+from core.models import User
+from fastapi import Depends
 
 @router.post("/context")
-async def set_market_context(context: MarketContext) -> Dict[str, str]:
-    """Define o contexto de mercado atual (para persistir no reload)."""
+async def set_market_context(
+    context: MarketContext,
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, str]:
+    """Define o contexto de mercado atual (para persistir no reload - Isolado por usuário)."""
     global ACTIVE_MARKET_CONTEXT
-    ACTIVE_MARKET_CONTEXT = context
+    ACTIVE_MARKET_CONTEXT[current_user.id] = context
     return {"message": "Contexto salvo"}
 
 @router.get("/context")
-async def get_market_context() -> Optional[MarketContext]:
-    """Retorna o contexto de mercado salvo."""
-    return ACTIVE_MARKET_CONTEXT
+async def get_market_context(
+    current_user: User = Depends(get_current_user)
+) -> Optional[MarketContext]:
+    """Retorna o contexto de mercado salvo para o usuário atual."""
+    return ACTIVE_MARKET_CONTEXT.get(current_user.id)
 
 @router.delete("/context")
-async def clear_market_context() -> Dict[str, str]:
-    """Limpa o contexto de mercado salvo em memória."""
+async def clear_market_context(
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, str]:
+    """Limpa o contexto de mercado salvo em memória para o usuário atual."""
     global ACTIVE_MARKET_CONTEXT
-    ACTIVE_MARKET_CONTEXT = None
+    if current_user.id in ACTIVE_MARKET_CONTEXT:
+        del ACTIVE_MARKET_CONTEXT[current_user.id]
     return {"message": "Contexto de mercado limpo"}
 
 @router.post("/active")
-async def set_active_strategy(strategy: ActiveStrategy) -> Dict[str, str]:
-    """Define a estratégia atual como oficial/ativa."""
+async def set_active_strategy(
+    strategy: ActiveStrategy,
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, str]:
+    """Define a estratégia atual como oficial/ativa para o usuário."""
     global ACTIVE_STRATEGY
     import datetime
     strategy.started_at = datetime.datetime.now().isoformat()
-    ACTIVE_STRATEGY = strategy
+    ACTIVE_STRATEGY[current_user.id] = strategy
     return {"message": "Estratégia ativada com sucesso"}
 
 @router.get("/active")
-async def get_active_strategy() -> Optional[ActiveStrategy]:
-    """Retorna a estratégia ativa atual."""
-    return ACTIVE_STRATEGY
+async def get_active_strategy(
+    current_user: User = Depends(get_current_user)
+) -> Optional[ActiveStrategy]:
+    """Retorna a estratégia ativa atual do usuário."""
+    return ACTIVE_STRATEGY.get(current_user.id)
+
+@router.delete("/active")
+async def clear_active_strategy(
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, str]:
+    """Limpa a estratégia ativa do usuário."""
+    global ACTIVE_STRATEGY
+    if current_user.id in ACTIVE_STRATEGY:
+        del ACTIVE_STRATEGY[current_user.id]
+    return {"message": "Estratégia ativa limpa"}
 
 @router.post("/calculate")
 async def calculate_results(request: ResultsRequest) -> Dict[str, Any]:

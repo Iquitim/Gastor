@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import api from "../../lib/api";
+import { useAuth } from "../../context/AuthContext";
 import dynamic from "next/dynamic";
 
 const EquityChart = dynamic(() => import("@/components/EquityChart"), { ssr: false });
@@ -33,7 +34,14 @@ export default function ResultsPage() {
     const [activeStrategy, setActiveStrategy] = useState<any>(null);
     const [showMock, setShowMock] = useState(false);
 
+    const { user } = useAuth(); // Add auth context
+
     useEffect(() => {
+        if (!user) {
+            setMetrics(null);
+            return;
+        }
+
         const fetchActive = async () => {
             try {
                 const strategy = await api.getActiveStrategy();
@@ -94,7 +102,7 @@ export default function ResultsPage() {
             }
         };
         fetchActive();
-    }, []);
+    }, [user]);
 
     const mockMetrics: Metrics = {
         finalValue: 10523.45,

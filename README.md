@@ -131,6 +131,37 @@ O Gastor agora conta com um sistema completo de gerenciamento de identidade:
 - **Proteção de Dados:** Cada usuário vê apenas suas próprias estratégias, sessões de paper trading e configurações.
 - **Integração OAuth:** Login social com Google para acesso rápido e seguro.
 
+### 🛡️ Isolamento de Sessão & Paper Trading Persistente
+
+O Gastor introduz um poderoso sistema de **Sessões Persistentes**:
+- **5 Slots por Usuário:** Cada usuário tem direito a rodar até 5 sessões de paper trading simultaneamente.
+- **Background Execution:** As sessões continuam rodando no servidor mesmo se você fechar o navegador ou deslogar.
+- **State Restoration:** Ao logar novamente, o frontend recupera automaticamente o estado das suas sessões ativas.
+
+### 🖥️ Planejamento de Capacidade (VPS KVM 2 - 8GB)
+
+Baseado no perfil do servidor **KVM 2 (8GB RAM, 2 vCPU)**, aqui está a estimativa realista de capacidade rodando o stack completo via Docker (Frontend + Backend + Banco de Dados):
+
+1. **Overhead do Sistema:**
+   - Sistema Operacional + Docker Daemon: ~500MB
+   - Banco de Dados (Postgres): ~300MB
+   - Backend (API ociosa): ~200MB
+   - Frontend (Next.js Server): ~200MB
+   - **Total Reservado:** ~1.2 GB
+
+2. **Memória Disponível para Sessões:** ~6.8 GB
+
+3. **Capacidade Real (Paper Trading):**
+   Considerando consumo médio de **70MB a 100MB** por sessão ativa (WebSocket + Estratégia em memória):
+
+| Perfil de Uso | Limite Sugerido | O que isso significa? |
+| :--- | :---: | :--- |
+| **Sessões Isoladas** | **~65-70** | Total de robôs rodando simultaneamente no servidor. |
+| **Usuários "Heavy"** | **~13** | Usuários rodando 5 estratégias (full slots) ao mesmo tempo. |
+| **Usuários "Médios"** | **~30-35** | Usuários rodando 2 estratégias em média. |
+
+> 🚀 **Veredito:** O plano **KVM 2 (8GB)** é excelente para iniciar. Ele suporta confortavelmente um grupo de **30 traders ativos** sem gargalos de memória. O limitador secundário será a CPU (2 cores) caso todos tentem processar backtests pesados no Otimizador simultaneamente.
+
 ---
 
 ## 📱 As 9 Abas da Interface
@@ -547,10 +578,14 @@ O desenvolvimento do Gastor é contínuo. As próximas etapas planejadas são:
   - **Optimistic UI**: Feedback visual imediato em todas as ações.
 - [x] **🔐 Sistema de Autenticação** ✅
   - Login/Registro, Perfis isolados, Google OAuth.
-- [ ] **Refinamentos de Sessão (Em Breve)**:
-  - Reset de IDs de sessão (reuso de slots).
+- [x] **Refinamentos de Sessão (Concluído) ✅**:
+  - Reset de IDs de sessão (reuso de slots 1-5).
   - Persistência em background (sessões continuam rodando após logout).
-  - Isolamento total de estado entre logins.
+  - Isolamento total de estado e dados entre usuários.
+  - Logout seguro com limpeza de cache local.
+- [ ] **Polimento de UI & Fixes (Próximo Passo) 🚧**:
+  - Ajustes visuais em emojis e ícones.
+  - Correção de bug no ícone de "Lixeira" da barra superior.
 - [ ] **Painel Administrativo**: Gestão de usuários e visão global do sistema.
 - [ ] **Live Trading Real**: Execução automática em conta real via API Binance.
 - [ ] **Machine Learning Avançado**: Integração com modelos Deep Learning (LSTMs).

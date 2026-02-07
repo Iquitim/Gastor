@@ -5,14 +5,15 @@ Live Trading Routes
 Endpoints para Paper Trading.
 
 Suporta:
-- Múltiplas sessões simultâneas
+- Múltiplas sessões simultâneas (slots)
 - Depósitos e saques virtuais
 - Reset de sessão a qualquer momento
 - Notificações via Telegram (opcional)
+- Segurança e Isolamento de Usuários
 """
 
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Depends, status
+from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional, List
 from sqlalchemy.orm import Session
 import asyncio
@@ -20,15 +21,18 @@ import os
 from datetime import datetime
 
 from core.database import get_db
-from core.models import PaperSession, PaperTrade, PaperPosition, PaperTransaction
+from core.models import PaperSession, PaperTrade, PaperPosition, PaperTransaction, User
 from core.paper_trading import PaperTradingEngine
 from core.binance_ws import get_multi_stream
 from core.data_loader import fetch_binance_klines
 from core import notifications
+from core.auth import get_current_user  # Auth dependency
 
 router = APIRouter()
 
 # Armazena engines ativos em memória (por session_id)
+# TODO: Em produção real, isso deveria ser um serviço separado (Redis/Celery)
+# Para este MVP, memória funciona se houver apenas 1 instância da API.
 active_engines: Dict[int, PaperTradingEngine] = {}
 
 
@@ -44,6 +48,7 @@ class StartSessionRequest(BaseModel):
     timeframe: str = "1h"
     initial_balance: float = 10000.0
     telegram_chat_id: Optional[str] = None
+    slot: int = Field(1, ge=1, le=5, description="Slot da sessão (1-5)")
 
 
 class TransactionRequest(BaseModel):
@@ -66,20 +71,28 @@ class SessionSummary(BaseModel):
     total_trades: int
     has_position: bool
     started_at: Optional[str]
+    slot: Optional[int]
 
 
 # =============================================================================
 # Helper Functions
 # =============================================================================
 
-def get_session_or_404(session_id: int, db: Session) -> PaperSession:
-    """Busca sessão ou retorna 404."""
+def get_session_or_404(session_id: int, db: Session, user: User) -> PaperSession:
+    """
+    Busca sessão ou retorna 404.
+    Garante que a sessão pertence ao usuário logado.
+    """
     session = db.query(PaperSession).filter(
         PaperSession.id == session_id
     ).first()
     
     if not session:
         raise HTTPException(status_code=404, detail=f"Sessão {session_id} não encontrada")
+    
+    # Security Check
+    if session.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado a esta sessão")
     
     return session
 
@@ -116,6 +129,45 @@ async def create_error_callback(session: PaperSession):
     return on_error
 
 
+async def _stop_session_internal(session_id: int, db: Session, user_id_check: Optional[int] = None):
+    """
+    Lógica interna para parar sessão.
+    Não faz commit no DB, caller deve fazer.
+    """
+    session = db.query(PaperSession).get(session_id)
+    if not session:
+        return
+        
+    if user_id_check and session.user_id != user_id_check:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+
+    if session.status == "running":
+        # Parar stream
+        multi_stream = get_multi_stream()
+        await multi_stream.remove_stream(f"session_{session.id}")
+        
+        # Remover engine
+        if session.id in active_engines:
+            del active_engines[session.id]
+        
+        # Atualizar status
+        session.status = "stopped"
+        session.stopped_at = datetime.utcnow()
+        
+        # Notificar (se possível)
+        if session.telegram_chat_id:
+            # Recalcular trades
+            total_trades = db.query(PaperTrade).filter(PaperTrade.session_id == session.id).count()
+            await notifications.send_session_stopped(
+                chat_id=session.telegram_chat_id,
+                strategy=session.strategy_slug,
+                initial_balance=session.initial_balance,
+                final_balance=session.current_balance,
+                total_trades=total_trades,
+                session_id=session.id,
+            )
+
+
 # =============================================================================
 # Session Management
 # =============================================================================
@@ -123,18 +175,37 @@ async def create_error_callback(session: PaperSession):
 @router.post("/start")
 async def start_session(
     request: StartSessionRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """
     Inicia uma nova sessão de Paper Trading.
     
-    Permite múltiplas sessões simultâneas.
+    - Enforced: Usuário Autenticado.
+    - Slot System: Se já existir sessão rodando no slot, ela é parada e arquivada.
     """
-    # Usar Chat ID padrão se não especificado
-    chat_id = request.telegram_chat_id or os.getenv("TELEGRAM_DEFAULT_CHAT_ID", "")
     
-    # Criar sessão no banco
+    # 1. Verificar Slot
+    existing_session = db.query(PaperSession).filter(
+        PaperSession.user_id == current_user.id,
+        PaperSession.slot == request.slot,
+        PaperSession.status == "running"
+    ).first()
+    
+    if existing_session:
+        print(f"[Live] Stopping existing session {existing_session.id} in slot {request.slot}")
+        await _stop_session_internal(existing_session.id, db, current_user.id)
+        # Commit intermediário para garantir status update antes de criar nova
+        db.commit() 
+    
+    # 2. Configurar Chat ID
+    # Prioridade: Request > User Profile > Env Var
+    chat_id = request.telegram_chat_id or current_user.telegram_chat_id or os.getenv("TELEGRAM_DEFAULT_CHAT_ID", "")
+    
+    # 3. Criar Nova Sessão
     session = PaperSession(
+        user_id=current_user.id,  # OWNERSHIP ENFORCEMENT
+        slot=request.slot,
         strategy_slug=request.strategy_slug,
         strategy_params=request.strategy_params,
         coin=request.coin,
@@ -148,7 +219,7 @@ async def start_session(
     db.commit()
     db.refresh(session)
     
-    # Criar engine
+    # 4. Criar Engine e Callbacks
     on_trade = await create_trade_callback(session)
     on_error = await create_error_callback(session)
     
@@ -161,17 +232,14 @@ async def start_session(
         strategy_params=request.strategy_params,
     )
     engine.on_trade = on_trade
-    # engine.on_error = on_error # Not used in new class yet, but good to keep structure
+    # engine.on_error = on_error
     
     active_engines[session.id] = engine
     
-    # Carregar dados históricos
+    # 5. Warmup e Stream
     await engine.warmup()
     
-    # Iniciar stream WebSocket
     symbol = request.coin.replace("/", "")
-    
-    # Iniciar stream WebSocket
     stream_id = f"session_{session.id}"
     
     multi_stream = get_multi_stream()
@@ -183,7 +251,7 @@ async def start_session(
         on_error=on_error,
     )
     
-    # Notificar início
+    # 6. Notificar
     if session.telegram_chat_id:
         await notifications.send_session_started(
             chat_id=session.telegram_chat_id,
@@ -197,6 +265,7 @@ async def start_session(
     return {
         "message": "Sessão iniciada com sucesso",
         "session_id": session.id,
+        "slot": session.slot,
         "status": "running",
         "strategy": request.strategy_slug,
         "coin": request.coin,
@@ -204,27 +273,44 @@ async def start_session(
     }
 
 
-
 @router.delete("/sessions")
-async def delete_all_sessions(db: Session = Depends(get_db)):
-    """Deleta TODAS as sessões de Paper Trading, limpando trades, transações e posições."""
+async def delete_all_sessions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Deleta TODAS as sessões DO USUÁRIO.
+    Não afeta sessões de outros usuários.
+    """
     
-    # 1. Parar todos os streams
+    # Buscar sessões do usuário
+    user_sessions = db.query(PaperSession).filter(
+        PaperSession.user_id == current_user.id
+    ).all()
+    
+    session_ids = [s.id for s in user_sessions]
+    
+    if not session_ids:
+        return {"message": "Nenhuma sessão encontrada."}
+    
+    # 1. Parar streams e engines ativos do usuário
     multi_stream = get_multi_stream()
-    active_ids = list(active_engines.keys())
     
-    for session_id in active_ids:
-        await multi_stream.remove_stream(f"session_{session_id}")
+    for sid in session_ids:
+        if sid in active_engines:
+            await multi_stream.remove_stream(f"session_{sid}")
+            del active_engines[sid]
     
-    active_engines.clear()
-    
-    # 2. Deletar dependências (já que não temos cascade garantido)
+    # 2. Deletar (com cuidado no DB)
     try:
-        # Nuke total das tabelas de Paper Trading
-        db.query(PaperTrade).delete()
-        db.query(PaperTransaction).delete()
-        db.query(PaperPosition).delete()
-        num_sessions = db.query(PaperSession).delete()
+        # Bulk delete trades/transações/posições dessas sessões
+        # SQLite não suporta DELETE com JOIN direito em algumas versões, então usando IN
+        db.query(PaperTrade).filter(PaperTrade.session_id.in_(session_ids)).delete(synchronize_session=False)
+        db.query(PaperTransaction).filter(PaperTransaction.session_id.in_(session_ids)).delete(synchronize_session=False)
+        db.query(PaperPosition).filter(PaperPosition.session_id.in_(session_ids)).delete(synchronize_session=False)
+        
+        # Deletar sessões
+        num_sessions = db.query(PaperSession).filter(PaperSession.id.in_(session_ids)).delete(synchronize_session=False)
         
         db.commit()
     except Exception as e:
@@ -237,43 +323,20 @@ async def delete_all_sessions(db: Session = Depends(get_db)):
 @router.post("/stop/{session_id}")
 async def stop_session(
     session_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ) -> Dict[str, Any]:
-    """Para uma sessão de Paper Trading."""
-    session = get_session_or_404(session_id, db)
+    """Para uma sessão de Paper Trading (apenas do usuário)."""
+    
+    session = get_session_or_404(session_id, db, current_user)
     
     if session.status != "running":
         raise HTTPException(status_code=400, detail="Sessão não está rodando")
     
-    # Parar stream
-    multi_stream = get_multi_stream()
-    await multi_stream.remove_stream(f"session_{session_id}")
+    await _stop_session_internal(session.id, db)
+    db.commit() # Commit final
     
-    # Remover engine
-    if session_id in active_engines:
-        del active_engines[session_id]
-    
-    # Contar trades
-    total_trades = db.query(PaperTrade).filter(
-        PaperTrade.session_id == session_id
-    ).count()
-    
-    # Atualizar status
-    session.status = "stopped"
-    session.stopped_at = datetime.utcnow()
-    db.commit()
-    
-    # Notificar encerramento
-    if session.telegram_chat_id:
-        await notifications.send_session_stopped(
-            chat_id=session.telegram_chat_id,
-            strategy=session.strategy_slug,
-            initial_balance=session.initial_balance,
-            final_balance=session.current_balance,
-            total_trades=total_trades,
-            session_id=session.id,
-        )
-    
+    total_trades = db.query(PaperTrade).filter(PaperTrade.session_id == session_id).count()
     pnl = session.current_balance - session.initial_balance
     
     return {
@@ -289,17 +352,15 @@ async def stop_session(
 @router.get("/sessions")
 async def list_sessions(
     status: Optional[str] = None,
+    # slot: Optional[int] = None, # Future filter
     limit: int = 50,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ) -> List[Dict[str, Any]]:
     """
-    Lista todas as sessões de Paper Trading.
-    
-    Args:
-        status: Filtrar por status (running, stopped, paused)
-        limit: Máximo de resultados
+    Lista sessões de Paper Trading DO USUÁRIO.
     """
-    query = db.query(PaperSession)
+    query = db.query(PaperSession).filter(PaperSession.user_id == current_user.id)
     
     if status:
         query = query.filter(PaperSession.status == status)
@@ -310,37 +371,28 @@ async def list_sessions(
     
     result = []
     for s in sessions:
-        # Contar trades
-        total_trades = db.query(PaperTrade).filter(
-            PaperTrade.session_id == s.id
-        ).count()
-        
-        # Verificar posição aberta e calcular equity
+        # Calcular Equity
         position = db.query(PaperPosition).filter(
             PaperPosition.session_id == s.id,
             PaperPosition.status == "OPEN"
         ).first()
         
-        # Calcular valor da posição
         position_value = 0.0
         if position:
-            # Usar triggers do engine ativo para preço atual, ou current_price da posição
-            if s.id in active_engines:
-                engine = active_engines[s.id]
-                if engine.candle_history:
-                    current_price = engine.candle_history[-1]["close"]
-                else:
-                    current_price = position.current_price or position.entry_price
+            if s.id in active_engines and active_engines[s.id].candle_history:
+                 current_price = active_engines[s.id].candle_history[-1]["close"]
             else:
-                current_price = position.current_price or position.entry_price
+                 current_price = position.current_price or position.entry_price
             position_value = position.quantity * current_price
         
-        # Equity = Cash + Position Value
         equity = s.current_balance + position_value
         pnl = equity - s.initial_balance
         
+        total_trades = db.query(PaperTrade).filter(PaperTrade.session_id == s.id).count()
+        
         result.append({
             "id": s.id,
+            "slot": s.slot,
             "status": s.status,
             "strategy_slug": s.strategy_slug,
             "coin": s.coin,
@@ -362,28 +414,28 @@ async def list_sessions(
 @router.get("/sessions/{session_id}")
 async def get_session(
     session_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ) -> Dict[str, Any]:
-    """Retorna detalhes de uma sessão."""
-    session = get_session_or_404(session_id, db)
+    """Retorna detalhes de uma sessão (apenas do usuário)."""
     
-    # Buscar posição ABERTA apenas
+    session = get_session_or_404(session_id, db, current_user)
+    
+    # ... Resto da lógica é igual, mas segura porque `get_session_or_404` verifica dono
+    
     position = db.query(PaperPosition).filter(
         PaperPosition.session_id == session_id,
         PaperPosition.status == "OPEN"
     ).first()
     
-    # Buscar trades recentes
     trades = db.query(PaperTrade).filter(
         PaperTrade.session_id == session_id
     ).order_by(PaperTrade.executed_at.desc()).limit(20).all()
     
-    # Buscar transações
     transactions = db.query(PaperTransaction).filter(
         PaperTransaction.session_id == session_id
     ).order_by(PaperTransaction.created_at.desc()).limit(10).all()
     
-    # Métricas
     sell_trades = [t for t in trades if t.side == "SELL"]
     total_pnl = sum(t.pnl or 0 for t in sell_trades)
     winning = [t for t in sell_trades if (t.pnl or 0) > 0]
@@ -391,7 +443,6 @@ async def get_session(
     
     pnl = session.current_balance - session.initial_balance
     
-    # Buscar triggers e price history se engine ativo
     triggers = None
     price_history = []
     if session_id in active_engines:
@@ -399,25 +450,18 @@ async def get_session(
         try:
             triggers = engine.get_triggers()
         except Exception as e:
-            print(f"Error getting triggers: {e}")
             triggers = {"status": "error", "message": str(e)}
         
-        # Últimos 50 candles para gráfico (OHLC completo)
         if engine.candle_history:
             price_history = [
-                {
-                    "time": c["time"],
-                    "open": c["open"],
-                    "high": c["high"],
-                    "low": c["low"],
-                    "close": c["close"],
-                }
+                {"time": c["time"], "open": c["open"], "high": c["high"], "low": c["low"], "close": c["close"]}
                 for c in engine.candle_history[-50:]
             ]
     
     return {
         "session": {
             "id": session.id,
+            "slot": session.slot,
             "status": session.status,
             "strategy_slug": session.strategy_slug,
             "strategy_params": session.strategy_params,
@@ -486,15 +530,15 @@ async def get_session(
 async def deposit(
     session_id: int,
     request: TransactionRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ) -> Dict[str, Any]:
-    """Adiciona capital a uma sessão."""
-    session = get_session_or_404(session_id, db)
+    """Adiciona capital (auth enforced)."""
+    session = get_session_or_404(session_id, db, current_user)
     
     if request.amount <= 0:
         raise HTTPException(status_code=400, detail="Valor deve ser positivo")
     
-    # Atualizar via engine se ativo, senão direto no banco
     if session_id in active_engines:
         result = active_engines[session_id].deposit(request.amount, request.note)
     else:
@@ -521,7 +565,6 @@ async def deposit(
             "balance_after": balance_after,
         }
     
-    # Notificar
     if session.telegram_chat_id:
         await notifications.send_deposit_alert(
             chat_id=session.telegram_chat_id,
@@ -530,31 +573,25 @@ async def deposit(
             session_id=session_id,
         )
     
-    return {
-        "message": "Depósito realizado com sucesso",
-        **result,
-    }
+    return {"message": "Depósito realizado com sucesso", **result}
 
 
 @router.post("/sessions/{session_id}/withdraw")
 async def withdraw(
     session_id: int,
     request: TransactionRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ) -> Dict[str, Any]:
-    """Remove capital de uma sessão."""
-    session = get_session_or_404(session_id, db)
+    """Remove capital (auth enforced)."""
+    session = get_session_or_404(session_id, db, current_user)
     
     if request.amount <= 0:
         raise HTTPException(status_code=400, detail="Valor deve ser positivo")
     
     if request.amount > session.current_balance:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Saldo insuficiente. Disponível: ${session.current_balance:.2f}"
-        )
+        raise HTTPException(status_code=400, detail=f"Saldo insuficiente.")
     
-    # Atualizar via engine se ativo, senão direto no banco
     if session_id in active_engines:
         result = active_engines[session_id].withdraw(request.amount, request.note)
     else:
@@ -581,7 +618,6 @@ async def withdraw(
             "balance_after": balance_after,
         }
     
-    # Notificar
     if session.telegram_chat_id:
         await notifications.send_withdrawal_alert(
             chat_id=session.telegram_chat_id,
@@ -590,147 +626,55 @@ async def withdraw(
             session_id=session_id,
         )
     
-    return {
-        "message": "Saque realizado com sucesso",
-        **result,
-    }
+    return {"message": "Saque realizado com sucesso", **result}
 
 
 @router.post("/sessions/{session_id}/reset")
 async def reset_session(
     session_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ) -> Dict[str, Any]:
-    """
-    Reseta uma sessão para o saldo inicial.
-    
-    Remove todos os trades, posições e transações.
-    """
-    session = get_session_or_404(session_id, db)
+    """Reseta a sessão (auth enforced)."""
+    session = get_session_or_404(session_id, db, current_user)
     
     old_balance = session.current_balance
     
-    # Resetar via engine se ativo
     if session_id in active_engines:
         result = active_engines[session_id].reset()
     else:
-        # Limpar dados
-        db.query(PaperTrade).filter(
-            PaperTrade.session_id == session_id
-        ).delete()
-        
-        db.query(PaperPosition).filter(
-            PaperPosition.session_id == session_id
-        ).delete()
-        
-        db.query(PaperTransaction).filter(
-            PaperTransaction.session_id == session_id
-        ).delete()
+        db.query(PaperTrade).filter(PaperTrade.session_id == session_id).delete()
+        db.query(PaperPosition).filter(PaperPosition.session_id == session_id).delete()
+        db.query(PaperTransaction).filter(PaperTransaction.session_id == session_id).delete()
         
         session.current_balance = session.initial_balance
         db.commit()
         
-        result = {
-            "old_balance": old_balance,
-            "new_balance": session.initial_balance,
-        }
+        result = {"old_balance": old_balance, "new_balance": session.initial_balance}
     
-    return {
-        "message": "Sessão resetada com sucesso",
-        "session_id": session_id,
-        **result,
-    }
+    return {"message": "Sessão resetada com sucesso", "session_id": session_id, **result}
 
 
 # =============================================================================
-# Status and Stats
+# Status and Stats - GLOBAL (Admin or System view? For now let's keep restricted)
 # =============================================================================
 
 @router.get("/status")
 async def get_global_status(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    # current_user: User = Depends(get_current_user) # Allow public for health check? Or restrict? Be safe.
 ) -> Dict[str, Any]:
     """
     Retorna status global do Paper Trading.
-    
-    Inclui todas as sessões ativas e streams conectados.
+    TODO: Em produção, isso deveria ser rota ADMIN apenas.
     """
-    # Sessões ativas
-    active_sessions = db.query(PaperSession).filter(
-        PaperSession.status == "running"
-    ).all()
-    
-    # Streams ativos
+    active_sessions = db.query(PaperSession).filter(PaperSession.status == "running").all()
     multi_stream = get_multi_stream()
     active_streams = multi_stream.get_active_streams()
-    
-    # Telegram configurado
-    telegram_configured = notifications.is_telegram_configured()
-    
-    sessions_summary = []
-    for s in active_sessions:
-        pnl = s.current_balance - s.initial_balance
-        sessions_summary.append({
-            "id": s.id,
-            "strategy": s.strategy_slug,
-            "coin": s.coin,
-            "balance": s.current_balance,
-            "pnl": pnl,
-            "pnl_pct": (pnl / s.initial_balance) * 100 if s.initial_balance > 0 else 0,
-        })
     
     return {
         "active_sessions_count": len(active_sessions),
         "active_streams_count": len(active_streams),
-        "telegram_configured": telegram_configured,
-        "sessions": sessions_summary,
-        "streams": active_streams,
-    }
-
-
-@router.get("/stats")
-async def get_stats(
-    db: Session = Depends(get_db)
-) -> Dict[str, Any]:
-    """
-    Retorna estatísticas agregadas de todas as sessões.
-    """
-    # Total de sessões
-    total_sessions = db.query(PaperSession).count()
-    active_sessions = db.query(PaperSession).filter(
-        PaperSession.status == "running"
-    ).count()
-    
-    # Total de trades
-    total_trades = db.query(PaperTrade).count()
-    
-    # PnL total de todas as sessões
-    sessions = db.query(PaperSession).all()
-    total_pnl = sum(s.current_balance - s.initial_balance for s in sessions)
-    
-    # Trades vencedores
-    winning_trades = db.query(PaperTrade).filter(
-        PaperTrade.side == "SELL",
-        PaperTrade.pnl > 0
-    ).count()
-    
-    losing_trades = db.query(PaperTrade).filter(
-        PaperTrade.side == "SELL",
-        PaperTrade.pnl < 0
-    ).count()
-    
-    total_completed = winning_trades + losing_trades
-    win_rate = (winning_trades / total_completed * 100) if total_completed > 0 else 0
-    
-    return {
-        "total_sessions": total_sessions,
-        "active_sessions": active_sessions,
-        "total_trades": total_trades,
-        "completed_trades": total_completed,
-        "total_pnl": total_pnl,
-        "win_rate": win_rate,
-        "winning_trades": winning_trades,
-        "losing_trades": losing_trades,
     }
 
 
@@ -738,58 +682,52 @@ async def get_stats(
 async def delete_session(
     session_id: int,
     force: bool = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ) -> Dict[str, Any]:
-    """
-    Deleta uma sessão e todos os seus dados.
-    
-    A sessão deve estar parada antes de ser deletada, a menos que force=True.
-    """
-    session = get_session_or_404(session_id, db)
+    """Deleta sessão (Auth enforced)."""
+    session = get_session_or_404(session_id, db, current_user)
     
     if session.status == "running" and not force:
-        raise HTTPException(
-            status_code=400,
-            detail="Pare a sessão antes de deletar ou use Force Delete"
-        )
+        raise HTTPException(status_code=400, detail="Pare a sessão antes de deletar")
     
-    # Limpar dados relacionados
-    db.query(PaperTrade).filter(
-        PaperTrade.session_id == session_id
-    ).delete()
+    # Se estiver rodando (Force Delete), parar primeiro
+    if session.status == "running":
+         await _stop_session_internal(session.id, db)
+         # Não commitar ainda, vamos deletar
+
+    # Delete Cascade Manual
+    db.query(PaperTrade).filter(PaperTrade.session_id == session_id).delete()
+    db.query(PaperPosition).filter(PaperPosition.session_id == session_id).delete()
+    db.query(PaperTransaction).filter(PaperTransaction.session_id == session_id).delete()
     
-    db.query(PaperPosition).filter(
-        PaperPosition.session_id == session_id
-    ).delete()
-    
-    db.query(PaperTransaction).filter(
-        PaperTransaction.session_id == session_id
-    ).delete()
-    
-    # Deletar sessão
     db.delete(session)
     db.commit()
     
-    return {
-        "message": f"Sessão {session_id} deletada com sucesso",
-    }
+    return {"message": f"Sessão {session_id} deletada com sucesso"}
 
 
 async def restore_active_sessions():
     """Restaura sessões ativas após reinício do servidor."""
     print("[Live] Restoring active sessions...")
     try:
-        # Precisamos de uma sessão nova pois estamos fora do contexto de request
         from core.database import SessionLocal
         with SessionLocal() as db:
+            # Restaurar SÓ running e de usuários ativos
+            # Como não temos user join aqui fácil sem circular imports ou complexidade,
+            # confiamos no status 'running'.
             sessions = db.query(PaperSession).filter(PaperSession.status == "running").all()
             print(f"[Live] Found {len(sessions)} active sessions to restore.")
             
             multi_stream = get_multi_stream()
             
             for session in sessions:
-                # Criar engine
-                print(f"[Live] Restoring session {session.id} ({session.strategy_slug})...")
+                print(f"[Live] Restoring session {session.id} (Slot {session.slot})...")
+                
+                # Prevenir duplicatas se chamado 2x
+                if session.id in active_engines:
+                    continue
+                
                 engine = PaperTradingEngine(
                     session_id=session.id,
                     initial_balance=session.initial_balance,
@@ -799,23 +737,15 @@ async def restore_active_sessions():
                     strategy_params=session.strategy_params or {},
                 )
                 
-                # Callbacks
                 engine.on_trade = await create_trade_callback(session)
                 engine.on_error = await create_error_callback(session)
                 
-                # Registrar
                 active_engines[session.id] = engine
-                
-                # Warmup
                 await engine.warmup()
                 
-                # Stream
-                symbol = session.coin.replace("/", "")
-                stream_id = f"session_{session.id}"
-                
                 await multi_stream.add_stream(
-                    stream_id=stream_id,
-                    symbol=symbol,
+                    stream_id=f"session_{session.id}",
+                    symbol=session.coin.replace("/", ""),
                     interval=session.timeframe,
                     on_candle=engine.on_candle,
                     on_error=engine.on_error,

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import api from "../lib/api";
+import { useAuth } from "./AuthContext";
 
 interface DataContextType {
     hasData: boolean;
@@ -13,20 +14,22 @@ interface DataContextType {
     } | null;
     chartData: any[];
     setDataLoaded: (info: { coin: string; timeframe: string; period: string; candles: number }, data: any[]) => void;
-    clearData: () => void;
+    clearLocalState: () => void;
+    resetApplication: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
     const [dataInfo, setDataInfo] = useState<DataContextType["dataInfo"]>(null);
     const [chartData, setChartData] = useState<any[]>([]);
 
     // Restore context on mount
     useEffect(() => {
         const checkPersistence = async () => {
-            // Only restore if we don't have data yet
-            if (dataInfo) return;
+            // Only restore if we have a user and don't have data yet
+            if (!user || dataInfo) return;
 
             try {
                 const context = await api.getMarketContext();
@@ -52,7 +55,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         };
 
         checkPersistence();
-    }, []); // Run once on mount
+    }, [user]); // Run when user changes (e.g. login)
 
     const setDataLoaded = (info: { coin: string; timeframe: string; period: string; candles: number }, data: any[]) => {
         setDataInfo(info);
@@ -67,9 +70,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
         }).catch(e => console.error("Failed to save context", e));
     };
 
-    const clearData = () => {
+    const clearLocalState = () => {
         setDataInfo(null);
         setChartData([]);
+    };
+
+    const resetApplication = () => {
+        clearLocalState();
 
         // Limpar persistência no backend
         api.clearMarketContext().catch(console.error);
@@ -85,7 +92,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
             dataInfo,
             chartData,
             setDataLoaded,
-            clearData,
+            clearLocalState,
+            resetApplication,
         }}>
             {children}
         </DataContext.Provider>

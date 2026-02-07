@@ -303,8 +303,9 @@ export const api = {
         timeframe: string;
         initial_balance: number;
         telegram_chat_id?: string;
+        slot?: number; // Added slot
     }) =>
-        fetchAPI<{ message: string; session_id: number }>("/api/live/start", {
+        fetchAPI<{ message: string; session_id: number; slot: number }>("/api/live/start", {
             method: "POST",
             body: JSON.stringify(options),
         }),

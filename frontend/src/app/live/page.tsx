@@ -20,6 +20,7 @@ interface Session {
     has_position: boolean;
     started_at: string | null;
     stopped_at: string | null;
+    slot?: number; // Added slot
 }
 
 interface SessionDetails {
@@ -236,6 +237,7 @@ export default function LiveTradingPage() {
 
     // Form state
     const [selectedStrategy, setSelectedStrategy] = useState("");
+    const [selectedSlot, setSelectedSlot] = useState(1); // Default Slot 1
     const [showNewSessionForm, setShowNewSessionForm] = useState(false);
 
     // Transaction modal
@@ -312,6 +314,7 @@ export default function LiveTradingPage() {
     }, [selectedSessionId, loadSessionDetails]);
 
     // Handlers
+
     const handleStartSession = async () => {
         if (!selectedStrategy) {
             setError("Selecione uma estratégia");
@@ -330,6 +333,7 @@ export default function LiveTradingPage() {
                 timeframe: settings.paperTradingTimeframe,
                 initial_balance: settings.paperTradingBalance,
                 telegram_chat_id: settings.telegramChatId || undefined,
+                slot: selectedSlot,
             });
 
             await loadSessions();
@@ -459,8 +463,6 @@ export default function LiveTradingPage() {
         return "text-gray-400";
     };
 
-
-
     return (
         <div className="min-h-screen bg-gray-950 p-6">
             {/* Header */}
@@ -491,75 +493,99 @@ export default function LiveTradingPage() {
             )}
 
             {/* New Session Form */}
-            {showNewSessionForm && (
-                <div className="mb-6 p-6 bg-gray-800/50 border border-gray-700 rounded-xl">
-                    <h2 className="text-lg font-semibold text-white mb-4">Iniciar Nova Sessão</h2>
+            {
+                showNewSessionForm && (
+                    <div className="mb-6 p-6 bg-gray-800/50 border border-gray-700 rounded-xl">
+                        <h2 className="text-lg font-semibold text-white mb-4">Iniciar Nova Sessão</h2>
 
-                    <div className="grid md:grid-cols-2 gap-4">
-                        {/* Strategy */}
-                        <div className="md:col-span-2">
-                            <label className="block text-gray-400 text-sm mb-2">Estratégia</label>
-                            <select
-                                value={selectedStrategy}
-                                onChange={(e) => setSelectedStrategy(e.target.value)}
-                                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                        <div className="grid md:grid-cols-2 gap-4">
+                            {/* Strategy */}
+                            <div>
+                                <label className="block text-gray-400 text-sm mb-2">Estratégia</label>
+                                <select
+                                    value={selectedStrategy}
+                                    onChange={(e) => setSelectedStrategy(e.target.value)}
+                                    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                >
+                                    <option value="">Selecione...</option>
+                                    {strategies.map((s) => (
+                                        <option key={s.slug} value={s.slug}>
+                                            {s.icon} {s.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Slot Selection */}
+                            <div>
+                                <label className="block text-gray-400 text-sm mb-2">Slot da Sessão</label>
+                                <select
+                                    value={selectedSlot}
+                                    onChange={(e) => setSelectedSlot(Number(e.target.value))}
+                                    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                >
+                                    {[1, 2, 3, 4, 5].map((slot) => {
+                                        const activeSession = sessions.find(s => s.id && (s as any).slot === slot && s.status === 'running');
+                                        return (
+                                            <option key={slot} value={slot}>
+                                                Slot {slot} {activeSession ? `(Ocupado: ${activeSession.strategy_slug})` : "(Livre)"}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Selecionar um slot ocupado irá substituir a sessão anterior.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                            <p className="text-blue-400 text-sm">
+                                📍 Configurações carregadas de Settings:
+                            </p>
+                            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                                <div>
+                                    <span className="text-gray-400">Par:</span>{" "}
+                                    <strong className="text-white">{getStoredSettings().paperTradingCoin}</strong>
+                                </div>
+                                <div>
+                                    <span className="text-gray-400">Timeframe:</span>{" "}
+                                    <strong className="text-white">{getStoredSettings().paperTradingTimeframe}</strong>
+                                </div>
+                                <div>
+                                    <span className="text-gray-400">Saldo:</span>{" "}
+                                    <strong className="text-white">${getStoredSettings().paperTradingBalance.toLocaleString()}</strong>
+                                </div>
+                                <div>
+                                    <span className="text-gray-400">Telegram:</span>{" "}
+                                    <strong className={getStoredSettings().telegramChatId ? "text-green-400" : "text-gray-500"}>
+                                        {getStoredSettings().telegramChatId ? "✓ Configurado" : "Não configurado"}
+                                    </strong>
+                                </div>
+                            </div>
+                            <p className="text-blue-300 text-xs mt-2">
+                                <a href="/settings" className="underline hover:text-blue-200">Alterar configurações →</a>
+                            </p>
+                        </div>
+
+                        <div className="flex gap-3 mt-4">
+                            <button
+                                onClick={handleStartSession}
+                                disabled={loading || !selectedStrategy}
+                                className="px-6 py-2 bg-green-600 hover:bg-green-500 text-white font-medium rounded-lg disabled:opacity-50"
                             >
-                                <option value="">Selecione...</option>
-                                {strategies.map((s) => (
-                                    <option key={s.slug} value={s.slug}>
-                                        {s.icon} {s.name}
-                                    </option>
-                                ))}
-                            </select>
+                                {loading ? "⏳ Iniciando..." : "🚀 Iniciar"}
+                            </button>
+                            <button
+                                onClick={() => setShowNewSessionForm(false)}
+                                className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+                            >
+                                Cancelar
+                            </button>
                         </div>
                     </div>
-
-                    <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-                        <p className="text-blue-400 text-sm">
-                            📍 Configurações carregadas de Settings:
-                        </p>
-                        <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                            <div>
-                                <span className="text-gray-400">Par:</span>{" "}
-                                <strong className="text-white">{getStoredSettings().paperTradingCoin}</strong>
-                            </div>
-                            <div>
-                                <span className="text-gray-400">Timeframe:</span>{" "}
-                                <strong className="text-white">{getStoredSettings().paperTradingTimeframe}</strong>
-                            </div>
-                            <div>
-                                <span className="text-gray-400">Saldo:</span>{" "}
-                                <strong className="text-white">${getStoredSettings().paperTradingBalance.toLocaleString()}</strong>
-                            </div>
-                            <div>
-                                <span className="text-gray-400">Telegram:</span>{" "}
-                                <strong className={getStoredSettings().telegramChatId ? "text-green-400" : "text-gray-500"}>
-                                    {getStoredSettings().telegramChatId ? "✓ Configurado" : "Não configurado"}
-                                </strong>
-                            </div>
-                        </div>
-                        <p className="text-blue-300 text-xs mt-2">
-                            <a href="/settings" className="underline hover:text-blue-200">Alterar configurações →</a>
-                        </p>
-                    </div>
-
-                    <div className="flex gap-3 mt-4">
-                        <button
-                            onClick={handleStartSession}
-                            disabled={loading || !selectedStrategy}
-                            className="px-6 py-2 bg-green-600 hover:bg-green-500 text-white font-medium rounded-lg disabled:opacity-50"
-                        >
-                            {loading ? "⏳ Iniciando..." : "🚀 Iniciar"}
-                        </button>
-                        <button
-                            onClick={() => setShowNewSessionForm(false)}
-                            className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
-                        >
-                            Cancelar
-                        </button>
-                    </div>
-                </div>
-            )}
+                )
+            }
 
             <div className="grid lg:grid-cols-3 gap-6">
                 {/* Sessions List */}
@@ -595,7 +621,9 @@ export default function LiveTradingPage() {
                                                     {session.status === "running" ? "● ATIVA" : "PARADA"}
                                                 </span>
                                             </div>
-                                            <span className="text-gray-500 text-xs">#{session.id}</span>
+                                            <span className="text-gray-500 text-xs font-mono">
+                                                {session.slot ? `Slot ${session.slot}` : `#${session.id}`}
+                                            </span>
                                         </div>
 
                                         <h3 className="text-white font-medium">{session.strategy_slug}</h3>
@@ -995,65 +1023,67 @@ export default function LiveTradingPage() {
             </div>
 
             {/* Transaction Modal */}
-            {transactionModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md mx-4">
-                        <h3 className="text-xl font-bold text-white mb-4">
-                            {transactionModal.type === "deposit" ? "💰 Depositar" : "🏦 Sacar"}
-                        </h3>
+            {
+                transactionModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md mx-4">
+                            <h3 className="text-xl font-bold text-white mb-4">
+                                {transactionModal.type === "deposit" ? "💰 Depositar" : "🏦 Sacar"}
+                            </h3>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-gray-400 text-sm mb-2">Valor (USDT)</label>
-                                <input
-                                    type="number"
-                                    value={transactionAmount}
-                                    onChange={(e) => setTransactionAmount(e.target.value)}
-                                    placeholder="0.00"
-                                    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white text-lg"
-                                    autoFocus
-                                />
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-gray-400 text-sm mb-2">Valor (USDT)</label>
+                                    <input
+                                        type="number"
+                                        value={transactionAmount}
+                                        onChange={(e) => setTransactionAmount(e.target.value)}
+                                        placeholder="0.00"
+                                        className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white text-lg"
+                                        autoFocus
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-gray-400 text-sm mb-2">
+                                        Nota <span className="text-gray-500">(opcional)</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={transactionNote}
+                                        onChange={(e) => setTransactionNote(e.target.value)}
+                                        placeholder="Ex: Aporte mensal"
+                                        className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                    />
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="block text-gray-400 text-sm mb-2">
-                                    Nota <span className="text-gray-500">(opcional)</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={transactionNote}
-                                    onChange={(e) => setTransactionNote(e.target.value)}
-                                    placeholder="Ex: Aporte mensal"
-                                    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white"
-                                />
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    onClick={handleTransaction}
+                                    disabled={loading || !transactionAmount}
+                                    className={`flex-1 py-2 font-medium rounded-lg disabled:opacity-50 ${transactionModal.type === "deposit"
+                                        ? "bg-green-600 hover:bg-green-500 text-white"
+                                        : "bg-red-600 hover:bg-red-500 text-white"
+                                        }`}
+                                >
+                                    {loading ? "⏳ Processando..." : "Confirmar"}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setTransactionModal(null);
+                                        setTransactionAmount("");
+                                        setTransactionNote("");
+                                    }}
+                                    className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+                                >
+                                    Cancelar
+                                </button>
                             </div>
-                        </div>
-
-                        <div className="flex gap-3 mt-6">
-                            <button
-                                onClick={handleTransaction}
-                                disabled={loading || !transactionAmount}
-                                className={`flex-1 py-2 font-medium rounded-lg disabled:opacity-50 ${transactionModal.type === "deposit"
-                                    ? "bg-green-600 hover:bg-green-500 text-white"
-                                    : "bg-red-600 hover:bg-red-500 text-white"
-                                    }`}
-                            >
-                                {loading ? "⏳ Processando..." : "Confirmar"}
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setTransactionModal(null);
-                                    setTransactionAmount("");
-                                    setTransactionNote("");
-                                }}
-                                className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
-                            >
-                                Cancelar
-                            </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Info Box */}
             <div className="mt-6 bg-blue-900/20 border border-blue-500/30 rounded-xl p-4">
@@ -1066,6 +1096,6 @@ export default function LiveTradingPage() {
                     <li>• Configure notificações Telegram para receber alertas de trades</li>
                 </ul>
             </div>
-        </div>
+        </div >
     );
 }

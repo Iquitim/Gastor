@@ -79,19 +79,20 @@ const navItems = [
 export default function Navbar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { clearData } = useData();
+    const { resetApplication, clearLocalState } = useData();
     const { user, isAuthenticated, logout, isLoading } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
 
     const handleReset = () => {
         if (confirm("Tem certeza que deseja resetar todos os dados e voltar ao início?")) {
-            clearData();
+            resetApplication();
             router.push('/');
         }
     };
 
     const handleLogout = () => {
+        clearLocalState(); // Limpa estado local ao sair
         logout();
         setShowUserMenu(false);
         router.push('/');

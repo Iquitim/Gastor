@@ -163,6 +163,9 @@ class PaperSession(Base):
     coin = Column(String)           # "SOL/USDT"
     timeframe = Column(String)      # "1h"
     
+    # Slot Management
+    slot = Column(Integer, nullable=True) # 1-5, permite reuso de "espaços"
+    
     # Capital
     initial_balance = Column(Float)
     current_balance = Column(Float)
