@@ -67,6 +67,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 try {
                     currentUser = await api.getCurrentUser();
                     setUser(currentUser);
+
+                    // Sync Settings globally on load
+                    try {
+                        const config = await api.getUserConfig();
+                        const telegram = await api.getTelegramConfig().catch(() => ({ chat_id: "" }));
+
+                        const settings = {
+                            initialBalance: config.backtest_initial_balance,
+                            useCompound: config.backtest_use_compound,
+                            paperTradingBalance: config.paper_initial_balance,
+                            paperTradingCoin: config.paper_default_coin,
+                            paperTradingTimeframe: config.paper_default_timeframe,
+                            telegramChatId: telegram.chat_id || "",
+                            // Fees
+                            exchangeFee: config.exchange_fee,
+                            slippageOverrides: config.slippage_overrides
+                        };
+                        localStorage.setItem("gastor_settings", JSON.stringify(settings));
+                    } catch (configErr) {
+                        console.error("Failed to sync settings on auth init", configErr);
+                    }
+
                 } catch (error) {
                     console.error("Failed to fetch user:", error);
                     removeStoredToken();

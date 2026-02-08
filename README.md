@@ -587,10 +587,12 @@ O desenvolvimento do Gastor é contínuo. As próximas etapas planejadas são:
   - **Background Processing**: Limpeza pesada (stops/deletes) movida para segundo plano.
   - **Optimistic UI**: Feedback instantâneo para o usuário ("Fire-and-Forget").
   - **Soft Delete**: Sessões marcadas como `deleting` somem imediatamente da lista.
-- [ ] **Polimento de UI & Fixes (Próximo Passo) 🚧**:
+- [x] **Refatoração do Core & Modularização (Concluído) ✅**:
+  - **Backend**: Lógica de estratégias unificada (Single Source of Truth).
+  - **Frontend**: Decomposição da página de Live Trading em componentes modulares.
+- [ ] **Polimento de UI & Fixes 🚧**:
   - Ajustes visuais em emojis e ícones.
-  - Correção de bug no ícone de "Lixeira" da barra superior.
-- [ ] **Painel Administrativo**: Gestão de usuários e visão global do sistema.
+- [ ] **Painel Administrativo (Próximo Passo)**: Gestão de usuários e visão global do sistema.
 - [ ] **Live Trading Real**: Execução automática em conta real via API Binance.
 - [ ] **Machine Learning Avançado**: Integração com modelos Deep Learning (LSTMs).
 

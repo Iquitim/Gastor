@@ -50,7 +50,7 @@ export default function StrategiesPage() {
                 setStrategies(mapped);
             } catch (e) {
                 console.error("Failed to load strategies", e);
-                setStrategies(DEFAULT_STRATEGIES); // Fallback
+                setStrategies([]); // Fallback to empty if API fails
             } finally {
                 setIsLoadingStrategies(false);
             }

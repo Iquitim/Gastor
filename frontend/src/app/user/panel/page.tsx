@@ -46,6 +46,8 @@ function UserPanelContent() {
             } else if (activeTab === "config") {
                 const data = await api.getUserConfig();
                 setConfig(data);
+                // Sync with current telegram state
+                syncToLocalStorage(data, telegram.chat_id || "");
             } else if (activeTab === "strategies") {
                 const data = await api.getUserStrategies();
                 setStrategies(data);
@@ -107,11 +109,34 @@ function UserPanelContent() {
         }
     };
 
+    const syncToLocalStorage = (newConfig: any, telegramId: string) => {
+        try {
+            const settings = {
+                initialBalance: newConfig.backtest_initial_balance,
+                useCompound: newConfig.backtest_use_compound,
+                paperTradingBalance: newConfig.paper_initial_balance,
+                paperTradingCoin: newConfig.paper_default_coin,
+                paperTradingTimeframe: newConfig.paper_default_timeframe,
+                telegramChatId: telegramId,
+                // Fees
+                exchangeFee: newConfig.exchange_fee,
+                slippageOverrides: newConfig.slippage_overrides
+            };
+            localStorage.setItem("gastor_settings", JSON.stringify(settings));
+        } catch (e) {
+            console.error("Failed to sync settings locally", e);
+        }
+    };
+
     const handleSaveConfig = async () => {
         try {
             // Remove 'system_defaults' and 'supported_coins' before sending
             const { system_defaults, supported_coins, ...dataToSend } = config;
             await api.updateUserConfig(dataToSend);
+
+            // Sync to local storage for other components
+            syncToLocalStorage(config, telegram.chat_id || "");
+
             showMessage("Configurações atualizadas!", "success");
         } catch (err: any) {
             showMessage(err.message, "error");

@@ -48,7 +48,7 @@ export default function OptimizerPage() {
                 setStrategies(mapped);
             } catch (e) {
                 console.error("Failed to load strategies", e);
-                setStrategies(DEFAULT_STRATEGIES);
+                setStrategies([]);
             }
         };
         load();

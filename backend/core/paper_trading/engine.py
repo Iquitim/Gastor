@@ -188,7 +188,9 @@ class PaperTradingEngine:
                 
                 # Recalcular com saldo atual do banco
                 current_balance = session.current_balance
-                fee_rate = 0.001 
+                # Usar taxa correta do sistema (Exchange + Slippage)
+                from core.config import get_total_fee
+                fee_rate = get_total_fee(session.coin)
                 
                 # Usar 95% do saldo para a compra
                 # Os 5% restantes ficam como reserva para:
@@ -290,14 +292,18 @@ class PaperTradingEngine:
                 entry_price = pos.entry_price
                 
                 gross_value = quantity * price
-                fee_rate = 0.001 
+                
+                # Usar taxa correta do sistema
+                from core.config import get_total_fee
+                fee_rate = get_total_fee(session.coin)
+                
                 fee = gross_value * fee_rate
                 net_value = gross_value - fee
                 
                 # PnL
                 pnl = net_value - (quantity * entry_price)
                 pnl_pct = (pnl / (quantity * entry_price)) * 100 if (quantity * entry_price) != 0 else 0
-    
+
                 new_balance = session.current_balance + net_value
                 session.current_balance = new_balance
     

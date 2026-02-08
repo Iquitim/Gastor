@@ -36,7 +36,30 @@ export const getStoredSettings = (coin?: string): StoredSettings => {
             if (parsed.paperTradingTimeframe) paperTradingTimeframe = parsed.paperTradingTimeframe;
             if (parsed.telegramChatId) telegramChatId = parsed.telegramChatId;
 
-            if (coin && parsed.coins) {
+            // Fee Calculation (New Structure)
+            if (coin && parsed.exchangeFee !== undefined) {
+                const exchangeFee = parsed.exchangeFee;
+                let slippage = 0;
+
+                if (parsed.slippageOverrides && parsed.slippageOverrides[coin] !== undefined) {
+                    slippage = parsed.slippageOverrides[coin];
+                } else {
+                    // Default Backend Slippage Values (Conservative Estimates)
+                    const defaults: Record<string, number> = {
+                        "BTC/USDT": 0.001,   // 0.10%
+                        "ETH/USDT": 0.0012,  // 0.12%
+                        "SOL/USDT": 0.0015,  // 0.15%
+                        "XRP/USDT": 0.0012,  // 0.12%
+                        "DOGE/USDT": 0.002,  // 0.20%
+                        "AVAX/USDT": 0.0025  // 0.25%
+                    };
+                    // Default fallback for unknown coins is 0.3% (0.003)
+                    slippage = defaults[coin] !== undefined ? defaults[coin] : 0.003;
+                }
+                customFee = exchangeFee + slippage;
+            }
+            // Backward compatibility (Old 'coins' structure)
+            else if (coin && parsed.coins) {
                 const coinCfg = parsed.coins[coin];
                 if (coinCfg && coinCfg.enabled) {
                     // Fee + Slippage in decimal
