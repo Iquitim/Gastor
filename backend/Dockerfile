@@ -39,5 +39,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Copy application code
 COPY . .
 
+# Entrypoint
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
+
 # Production command
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["./entrypoint.sh"]

@@ -167,7 +167,7 @@ async def test_telegram(
     if not config or not config.chat_id:
         raise HTTPException(status_code=400, detail="Telegram não configurado")
         
-    success = await send_telegram(config.chat_id, "🔔 <b>Teste Gastor:</b> Se voc\\ê está lendo isso, a configuração deu certo!")
+    success = await send_telegram(config.chat_id, "🔔 <b>Teste Gastor:</b> Se você está lendo isso, a configuração deu certo!")
     
     if success:
         return {"status": "success"}

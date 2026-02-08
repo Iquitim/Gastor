@@ -25,13 +25,16 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-http://localhost/auth/google/callback}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - ADMIN_TELEGRAM_CHAT_ID=${ADMIN_TELEGRAM_CHAT_ID}
+      - ADMIN_EMAILS=${ADMIN_EMAILS}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
     depends_on:
       - db
     networks:
       - gastor-network
     volumes:
       - ./backend:/app
-
 
   frontend:
     build:
@@ -47,6 +50,7 @@ services:
 
 volumes:
   postgres_data:
+
 
 networks:
   gastor-network:

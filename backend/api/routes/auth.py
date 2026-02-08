@@ -92,6 +92,7 @@ class UserResponse(BaseModel):
     username: str
     email: str
     telegram_chat_id: Optional[str] = None
+    role: str
     is_active: bool
     
     class Config:
@@ -126,6 +127,16 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
     - **email**: Valid email address
     - **password**: Password (minimum 6 characters)
     """
+    # Check MAX_USERS limit
+    max_users_setting = db.query(models.SystemConfig).filter(models.SystemConfig.key == "MAX_USERS").first()
+    if max_users_setting:
+        current_users_count = db.query(models.User).count()
+        if current_users_count >= int(max_users_setting.value):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Maximum number of users reached"
+            )
+
     # Check if email already exists
     existing_email = db.query(models.User).filter(models.User.email == user_data.email).first()
     if existing_email:
@@ -382,6 +393,16 @@ async def google_callback(token_data: GoogleTokenData, db: Session = Depends(get
             user.google_id = google_id
             db.commit()
         else:
+            # Check MAX_USERS limit before creating new user
+            max_users_setting = db.query(models.SystemConfig).filter(models.SystemConfig.key == "MAX_USERS").first()
+            if max_users_setting:
+                current_users_count = db.query(models.User).count()
+                if current_users_count >= int(max_users_setting.value):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Maximum number of users reached"
+                    )
+
             # Create new user
             # Generate unique username from name
             base_username = name.lower().replace(" ", "_")[:20]

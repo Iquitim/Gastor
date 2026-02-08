@@ -253,7 +253,7 @@ function UserPanelContent() {
                         <div>
                             <h2 className="text-xl font-semibold text-white mb-4">Configurar Notificações</h2>
                             <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded text-sm text-blue-200">
-                                1. Inicie uma conversa com o bot <b>@SeuBotOuGastorBot</b><br />
+                                1. Inicie uma conversa com o bot <b><a href="https://t.me/gastor_alerts_bot" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-100">@gastor_alerts_bot</a></b><br />
                                 2. Envie <code>/start</code><br />
                                 3. Cole seu <b>Chat ID</b> abaixo.
                             </div>

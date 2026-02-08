@@ -133,8 +133,9 @@ async def get_current_user(
     
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is disabled"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User account is disabled",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     
     return user
@@ -152,3 +153,16 @@ async def get_current_user_optional(
         return await get_current_user(token, db)
     except HTTPException:
         return None
+
+async def get_current_admin(
+    current_user: models.User = Depends(get_current_user),
+) -> models.User:
+    """
+    Dependency to get the current authenticated user and verify Admin privileges.
+    """
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required"
+        )
+    return current_user

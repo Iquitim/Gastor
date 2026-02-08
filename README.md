@@ -138,6 +138,15 @@ O Gastor introduz um poderoso sistema de **Sessões Persistentes**:
 - **Background Execution:** As sessões continuam rodando no servidor mesmo se você fechar o navegador ou deslogar.
 - **State Restoration:** Ao logar novamente, o frontend recupera automaticamente o estado das suas sessões ativas.
 
+### 🛡️ Painel Administrativo (Master User)
+
+O sistema possui um painel exclusivo para administração e governança da plataforma:
+
+- **Gestão de Usuários:** Listagem completa, com opções para **Bloquear** (suspender acesso) ou **Banir** (encerrar sessões e revogar acesso permanentemente) usuários suspeitos.
+- **Monitoramento de Recursos:** Gráficos em tempo real de uso de CPU, Memória e total de sessões Docker ativas.
+- **Configuração Global:** Alteração dinâmica de parâmetros do sistema, como o **Limite Máximo de Usuários** permitidos, sem necessidade de rebuild.
+- **Notificações de Admin:** O administrador recebe alertas no Telegram sobre novos cadastros e eventos críticos do sistema.
+
 ### 🖥️ Planejamento de Capacidade (VPS KVM 2 - 8GB)
 
 Baseado no perfil do servidor **KVM 2 (8GB RAM, 2 vCPU)**, aqui está a estimativa realista de capacidade rodando o stack completo via Docker (Frontend + Backend + Banco de Dados):
@@ -590,9 +599,11 @@ O desenvolvimento do Gastor é contínuo. As próximas etapas planejadas são:
 - [x] **Refatoração do Core & Modularização (Concluído) ✅**:
   - **Backend**: Lógica de estratégias unificada (Single Source of Truth).
   - **Frontend**: Decomposição da página de Live Trading em componentes modulares.
-- [ ] **Polimento de UI & Fixes 🚧**:
+- [x] **Polimento de UI & Fixes (Concluído) ✅**:
   - Ajustes visuais em emojis e ícones.
-- [ ] **Painel Administrativo (Próximo Passo)**: Gestão de usuários e visão global do sistema.
+- [x] **Painel Administrativo (Concluído) ✅**: Gestão de usuários e visão global do sistema.
+- [ ] **Gestão de Perfil (Próximo Passo)**: Alteração de senha e nome de usuário pelo painel.
+- [ ] **Aprimoramentos de Trading**: Regras de Stop Loss e melhorias no Construtor de Estratégias.
 - [ ] **Live Trading Real**: Execução automática em conta real via API Binance.
 - [ ] **Machine Learning Avançado**: Integração com modelos Deep Learning (LSTMs).
 

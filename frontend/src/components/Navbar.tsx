@@ -138,6 +138,7 @@ export default function Navbar() {
                                         </Link>
                                     );
                                 })}
+
                             </div>
 
                             <button
@@ -170,25 +171,33 @@ export default function Navbar() {
                                                     <p className="text-sm font-medium text-white">{user.username}</p>
                                                     <p className="text-xs text-slate-400 truncate">{user.email}</p>
                                                 </div>
-                                                <div className="py-1">
-                                                    <Link
-                                                        href="/user/panel"
-                                                        onClick={() => setShowUserMenu(false)}
-                                                        className="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-                                                    >
-                                                        {Icons.user}
-                                                        Painel do Usuário
-                                                    </Link>
+                                                <Link
+                                                    href="/admin"
+                                                    onClick={() => setShowUserMenu(false)}
+                                                    className="flex items-center gap-2 px-4 py-2 text-sm text-purple-400 hover:bg-slate-800 hover:text-purple-300 transition-colors"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+                                                    </svg>
+                                                    Painel Admin
+                                                </Link>
+                                                <Link
+                                                    href="/user/panel"
+                                                    onClick={() => setShowUserMenu(false)}
+                                                    className="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                                                >
+                                                    {Icons.user}
+                                                    Painel do Usuário
+                                                </Link>
 
-                                                    <Link
-                                                        href="/glossary"
-                                                        onClick={() => setShowUserMenu(false)}
-                                                        className="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-                                                    >
-                                                        {Icons.glossary}
-                                                        Glossário
-                                                    </Link>
-                                                </div>
+                                                <Link
+                                                    href="/glossary"
+                                                    onClick={() => setShowUserMenu(false)}
+                                                    className="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                                                >
+                                                    {Icons.glossary}
+                                                    Glossário
+                                                </Link>
                                                 <div className="border-t border-slate-700">
                                                     <button
                                                         onClick={handleLogout}
@@ -236,72 +245,91 @@ export default function Navbar() {
             </div>
 
             {/* Mobile Navigation */}
-            {isOpen && (
-                <div className="md:hidden">
-                    <div className="px-2 pt-2 pb-3 space-y-1 bg-slate-900 border-t border-slate-800">
-                        {navItems.map((item) => {
-                            const isActive = pathname === item.href;
-                            return (
+            {
+                isOpen && (
+                    <div className="md:hidden">
+                        <div className="px-2 pt-2 pb-3 space-y-1 bg-slate-900 border-t border-slate-800">
+                            {navItems.map((item) => {
+                                const isActive = pathname === item.href;
+                                return (
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        onClick={() => setIsOpen(false)}
+                                        className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${isActive
+                                            ? "bg-slate-800 text-emerald-400"
+                                            : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                                            }`}
+                                    >
+                                        {item.icon}
+                                        {item.label}
+                                    </Link>
+                                );
+                            })}
+
+                            {user?.role === "admin" && (
                                 <Link
-                                    key={item.href}
-                                    href={item.href}
+                                    href="/admin"
                                     onClick={() => setIsOpen(false)}
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${isActive
-                                        ? "bg-slate-800 text-emerald-400"
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${pathname === "/admin"
+                                        ? "bg-slate-800 text-purple-400"
                                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
                                         }`}
                                 >
-                                    {item.icon}
-                                    {item.label}
-                                </Link>
-                            );
-                        })}
-                        {/* Mobile Reset */}
-                        <button
-                            onClick={async () => {
-                                await handleReset();
-                                setIsOpen(false);
-                            }}
-                            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-slate-800 hover:text-red-400 transition-colors"
-                        >
-                            {Icons.trash}
-                            Resetar
-                        </button>
-
-
-                        {/* Mobile User Menu */}
-                        <div className="border-t border-slate-700 pt-2 mt-2">
-                            {isAuthenticated && user ? (
-                                <>
-                                    <div className="px-3 py-2">
-                                        <p className="text-sm font-medium text-white">{user.username}</p>
-                                        <p className="text-xs text-slate-400">{user.email}</p>
-                                    </div>
-                                    <button
-                                        onClick={() => {
-                                            handleLogout();
-                                            setIsOpen(false);
-                                        }}
-                                        className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-slate-800 hover:text-red-400 transition-colors"
-                                    >
-                                        {Icons.logout}
-                                        Sair
-                                    </button>
-                                </>
-                            ) : (
-                                <Link
-                                    href="/login"
-                                    onClick={() => setIsOpen(false)}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-emerald-400 hover:bg-slate-800 transition-colors"
-                                >
-                                    {Icons.user}
-                                    Entrar
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+                                    </svg>
+                                    Painel Admin
                                 </Link>
                             )}
+
+                            {/* Mobile Reset */}
+                            <button
+                                onClick={async () => {
+                                    await handleReset();
+                                    setIsOpen(false);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-slate-800 hover:text-red-400 transition-colors"
+                            >
+                                {Icons.trash}
+                                Resetar
+                            </button>
+
+
+                            {/* Mobile User Menu */}
+                            <div className="border-t border-slate-700 pt-2 mt-2">
+                                {isAuthenticated && user ? (
+                                    <>
+                                        <div className="px-3 py-2">
+                                            <p className="text-sm font-medium text-white">{user.username}</p>
+                                            <p className="text-xs text-slate-400">{user.email}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                handleLogout();
+                                                setIsOpen(false);
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-slate-800 hover:text-red-400 transition-colors"
+                                        >
+                                            {Icons.logout}
+                                            Sair
+                                        </button>
+                                    </>
+                                ) : (
+                                    <Link
+                                        href="/login"
+                                        onClick={() => setIsOpen(false)}
+                                        className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-emerald-400 hover:bg-slate-800 transition-colors"
+                                    >
+                                        {Icons.user}
+                                        Entrar
+                                    </Link>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </nav>
+                )
+            }
+        </nav >
     );
 }

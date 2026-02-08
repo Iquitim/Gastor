@@ -14,6 +14,7 @@ export interface User {
     email: string;
     telegram_chat_id: string | null;
     is_active: boolean;
+    role: string;
 }
 
 interface AuthContextType {

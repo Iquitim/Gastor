@@ -374,7 +374,7 @@ export const api = {
 
     // Register new user
     register: (data: { username: string; email: string; password: string }) =>
-        fetchAPI<{ id: number; username: string; email: string }>("/api/auth/register", {
+        fetchAPI<{ id: number; username: string; email: string; role: string }>("/api/auth/register", {
             method: "POST",
             body: JSON.stringify(data),
             skipAuth: true,
@@ -404,7 +404,7 @@ export const api = {
 
     // Get current user
     getCurrentUser: () =>
-        fetchAPI<{ id: number; username: string; email: string; telegram_chat_id: string | null; is_active: boolean }>("/api/auth/me"),
+        fetchAPI<{ id: number; username: string; email: string; telegram_chat_id: string | null; is_active: boolean; role: string }>("/api/auth/me"),
 
     // Update profile
     updateProfile: (data: { username?: string; telegram_chat_id?: string; binance_api_key?: string; binance_api_secret?: string }) =>
@@ -518,6 +518,43 @@ export const api = {
             created_at: string;
         }[]>("/api/user/strategies"),
 
+    // ========================================
+    // Admin Panel
+    // ========================================
+
+    getUsers: (skip = 0, limit = 100) =>
+        fetchAPI<{
+            id: number;
+            username: string;
+            email: string;
+            role: string;
+            is_active: boolean;
+            created_at: string;
+            active_sessions: number;
+        }[]>(`/api/admin/users?skip=${skip}&limit=${limit}`),
+
+    blockUser: (userId: number) =>
+        fetchAPI<{ message: string }>(`/api/admin/users/${userId}/block`, { method: "PATCH" }),
+
+    unblockUser: (userId: number) =>
+        fetchAPI<{ message: string }>(`/api/admin/users/${userId}/unblock`, { method: "PATCH" }),
+
+    getSystemStats: () =>
+        fetchAPI<{
+            cpu_usage: number;
+            ram_usage: number;
+            active_sessions: number;
+            active_users: number;
+        }>("/api/admin/system/stats"),
+
+    getSystemConfig: () =>
+        fetchAPI<{ max_users: number }>("/api/admin/system/config"),
+
+    updateSystemConfig: (data: { max_users: number }) =>
+        fetchAPI<{ message: string; max_users: number }>("/api/admin/system/config", {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
 };
 
 export default api;

@@ -45,6 +45,22 @@ class User(Base):
     telegram_config = relationship("TelegramConfig", back_populates="user", uselist=False, cascade="all, delete-orphan")
     fee_config = relationship("UserConfig", back_populates="user", uselist=False, cascade="all, delete-orphan")
     config = relationship("UserConfig", back_populates="user", uselist=False, viewonly=True, sync_backref=False) # Alias for backward compat if needed, or just rename outright
+    
+    # RBAC
+    role = Column(String, default="user")  # "user" | "admin"
+
+
+class SystemConfig(Base):
+    """
+    Global system configuration.
+    """
+    __tablename__ = "system_config"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, unique=True, index=True)
+    value = Column(String)  # Store as string, cast as needed
+    description = Column(String, nullable=True)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 
 class ExchangeKey(Base):
